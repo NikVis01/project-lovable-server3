@@ -90,27 +90,94 @@ server.listen(port, () => {
 // Store active transcription sessions
 const transcriptionSessions = new Map();
 
+// Store session coordination for multi-socket sessions (input + output)
+// This allows two sockets (one for microphone input, one for system audio output)
+// to share the same database session, enabling simultaneous transcription
+const sessionCoordination = new Map();
+
+// Cleanup stale session coordinations every 5 minutes
+const COORDINATION_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const COORDINATION_MAX_AGE = 10 * 60 * 1000; // 10 minutes
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [clientId, coordination] of sessionCoordination.entries()) {
+    if (now - coordination.lastActivity > COORDINATION_MAX_AGE) {
+      console.log(
+        `Cleaning up stale session coordination for client ${clientId}`
+      );
+      // Clean up the database session if it exists
+      if (coordination.dbSession) {
+        transcriptService
+          .cleanupSession(coordination.dbSession.socketId)
+          .catch(console.error);
+      }
+      sessionCoordination.delete(clientId);
+    }
+  }
+}, COORDINATION_CLEANUP_INTERVAL);
+
 io.on("connection", (socket) => {
   console.log(`A user connected: ${socket.id}`);
 
   // Create a dedicated speech service instance for this socket
   const speechService = new SpeechService();
   let speechStream: any = null;
-  let accumulatedTranscript = ""; // Track full transcript for this session
+  let accumulatedInputTranscript = ""; // Track input transcript for this session
+  let accumulatedOutputTranscript = ""; // Track output transcript for this session
 
   // Handle starting speech recognition
   socket.on("start-transcription", async (options = {}) => {
     console.log(`Starting transcription for client ${socket.id}`, options);
 
     try {
-      // Reset accumulated transcript for new session
-      accumulatedTranscript = "";
+      const sourceType = options.sourceType || "input";
 
-      // Create database session
-      const dbSession = await transcriptService.createSession(
-        socket.id,
-        options.languageCode || "en-US"
-      );
+      // Reset accumulated transcript for new session
+      if (sourceType === "input") {
+        accumulatedInputTranscript = "";
+      } else {
+        accumulatedOutputTranscript = "";
+      }
+
+      // Handle session coordination for multi-socket sessions
+      let dbSession;
+      const clientId = options.clientId || socket.handshake.address; // Use client ID or IP to group sockets
+
+      if (sessionCoordination.has(clientId)) {
+        // Use existing session for this client
+        const coordination = sessionCoordination.get(clientId);
+        dbSession = coordination.dbSession;
+        console.log(
+          `Using existing session ${dbSession.id} for ${sourceType} transcription`
+        );
+      } else {
+        // Create new database session
+        dbSession = await transcriptService.createSession(
+          socket.id,
+          options.languageCode || "en-US"
+        );
+
+        // Initialize session coordination
+        sessionCoordination.set(clientId, {
+          dbSession,
+          inputSocketId: sourceType === "input" ? socket.id : null,
+          outputSocketId: sourceType === "output" ? socket.id : null,
+          lastActivity: Date.now(),
+        });
+        console.log(
+          `Created new session ${dbSession.id} for ${sourceType} transcription`
+        );
+      }
+
+      // Update coordination with this socket
+      const coordination = sessionCoordination.get(clientId);
+      if (sourceType === "input") {
+        coordination.inputSocketId = socket.id;
+      } else {
+        coordination.outputSocketId = socket.id;
+      }
+      coordination.lastActivity = Date.now();
 
       speechStream = speechService.createStreamingRecognition({
         onResult: async (transcript, isFinal) => {
@@ -123,65 +190,65 @@ io.on("connection", (socket) => {
           });
 
           // Determine if this is system audio output or microphone input
-          const sourceType = options.sourceType || "input"; // Default to input for backward compatibility
           const isSystemAudio = sourceType === "output";
 
-          // Update full transcript and store in database
-          if (isFinal) {
-            // Add final transcript to accumulated transcript
-            accumulatedTranscript +=
-              (accumulatedTranscript ? "\n\n" : "") + transcript.trim();
+          // Update appropriate accumulated transcript
+          let currentAccumulated, currentFullTranscript;
 
-            try {
-              if (isSystemAudio) {
-                await transcriptService.updateLiveTranscriptOutput(
-                  socket.id,
-                  accumulatedTranscript
-                );
-              } else {
-                await transcriptService.updateLiveTranscriptInput(
-                  socket.id,
-                  accumulatedTranscript
-                );
-              }
-            } catch (dbError) {
-              console.error(
-                `Failed to store final transcript in database (${sourceType}):`,
-                dbError
-              );
+          if (isFinal) {
+            // Add final transcript to appropriate accumulated transcript
+            if (isSystemAudio) {
+              accumulatedOutputTranscript +=
+                (accumulatedOutputTranscript ? "\n\n" : "") + transcript.trim();
+              currentAccumulated = accumulatedOutputTranscript;
+            } else {
+              accumulatedInputTranscript +=
+                (accumulatedInputTranscript ? "\n\n" : "") + transcript.trim();
+              currentAccumulated = accumulatedInputTranscript;
             }
+            currentFullTranscript = currentAccumulated;
           } else {
             // For interim results, show current accumulated + interim
-            const currentFullTranscript =
-              accumulatedTranscript +
-              (accumulatedTranscript ? "\n\n" : "") +
-              transcript.trim();
+            if (isSystemAudio) {
+              currentFullTranscript =
+                accumulatedOutputTranscript +
+                (accumulatedOutputTranscript ? "\n\n" : "") +
+                transcript.trim();
+            } else {
+              currentFullTranscript =
+                accumulatedInputTranscript +
+                (accumulatedInputTranscript ? "\n\n" : "") +
+                transcript.trim();
+            }
+          }
 
-            try {
-              if (isSystemAudio) {
-                await transcriptService.updateLiveTranscriptOutput(
-                  socket.id,
-                  currentFullTranscript
-                );
-              } else {
-                await transcriptService.updateLiveTranscriptInput(
-                  socket.id,
-                  currentFullTranscript
-                );
-              }
-            } catch (dbError) {
-              console.error(
-                `Failed to store interim transcript in database (${sourceType}):`,
-                dbError
+          // Update database using the shared session but the original socket ID for lookups
+          try {
+            if (isSystemAudio) {
+              await transcriptService.updateLiveTranscriptOutput(
+                dbSession.socketId,
+                currentFullTranscript
+              );
+            } else {
+              await transcriptService.updateLiveTranscriptInput(
+                dbSession.socketId,
+                currentFullTranscript
               );
             }
+          } catch (dbError) {
+            console.error(
+              `Failed to store ${
+                isFinal ? "final" : "interim"
+              } transcript in database (${sourceType}):`,
+              dbError
+            );
           }
         },
         onError: async (error) => {
           console.error("Speech recognition error:", error);
 
-          // Mark session as error in database
-          await transcriptService.markSessionError(socket.id);
+          // Mark session as error in database using the shared session
+          await transcriptService.markSessionError(dbSession.socketId);
 
           socket.emit("transcription-error", {
             error: error.message,
@@ -189,25 +256,26 @@ io.on("connection", (socket) => {
           });
         },
         onEnd: async () => {
-          console.log("Speech recognition ended");
-
-          // End database session
-          try {
-            await transcriptService.endSession(socket.id);
-          } catch (dbError) {
-            console.error("Failed to end session in database:", dbError);
-          }
+          console.log(`Speech recognition ended for ${sourceType}`);
 
           socket.emit("transcription-ended", {
             timestamp: new Date().toISOString(),
           });
           speechStream = null;
+
+          // Note: Don't end the database session here as the other socket might still be active
+          // Session cleanup will happen when both sockets disconnect
         },
         languageCode: options.languageCode || "en-US",
         sampleRateHertz: options.sampleRateHertz || 16000,
       });
 
-      transcriptionSessions.set(socket.id, { speechStream, dbSession });
+      transcriptionSessions.set(socket.id, {
+        speechStream,
+        dbSession,
+        sourceType,
+        clientId,
+      });
       socket.emit("transcription-started", { sessionId: dbSession.id });
     } catch (error) {
       console.error("Failed to start speech recognition:", error);
@@ -308,20 +376,52 @@ io.on("connection", (socket) => {
   socket.on("stop-transcription", async () => {
     console.log(`Stopping transcription for client ${socket.id}`);
 
+    const session = transcriptionSessions.get(socket.id);
+
     if (speechStream) {
       speechService.endStream();
       speechStream = null;
     }
 
-    // End database session
-    try {
-      await transcriptService.endSession(socket.id);
-    } catch (dbError) {
-      console.error("Failed to end session in database:", dbError);
-    }
+    if (session) {
+      const { clientId, sourceType } = session;
 
-    // Reset accumulated transcript
-    accumulatedTranscript = "";
+      // Reset appropriate accumulated transcript
+      if (sourceType === "input") {
+        accumulatedInputTranscript = "";
+      } else {
+        accumulatedOutputTranscript = "";
+      }
+
+      // Handle session coordination cleanup
+      if (sessionCoordination.has(clientId)) {
+        const coordination = sessionCoordination.get(clientId);
+
+        // Remove this socket from coordination
+        if (sourceType === "input") {
+          coordination.inputSocketId = null;
+        } else {
+          coordination.outputSocketId = null;
+        }
+
+        // If both sockets are gone, end the database session
+        if (!coordination.inputSocketId && !coordination.outputSocketId) {
+          try {
+            await transcriptService.endSession(coordination.dbSession.socketId);
+            sessionCoordination.delete(clientId);
+            console.log(
+              `Ended shared session ${coordination.dbSession.id} - all sockets disconnected`
+            );
+          } catch (dbError) {
+            console.error("Failed to end session in database:", dbError);
+          }
+        } else {
+          console.log(
+            `Keeping session ${coordination.dbSession.id} active - other socket still connected`
+          );
+        }
+      }
+    }
 
     transcriptionSessions.delete(socket.id);
     socket.emit("transcription-stopped", {
@@ -333,16 +433,56 @@ io.on("connection", (socket) => {
   socket.on("disconnect", async () => {
     console.log(`Client disconnected: ${socket.id}`);
 
+    const session = transcriptionSessions.get(socket.id);
+
     if (speechStream) {
       speechService.endStream();
       speechStream = null;
     }
 
-    // Clean up database session
-    await transcriptService.cleanupSession(socket.id);
+    if (session) {
+      const { clientId, sourceType } = session;
 
-    // Reset accumulated transcript
-    accumulatedTranscript = "";
+      // Reset appropriate accumulated transcript
+      if (sourceType === "input") {
+        accumulatedInputTranscript = "";
+      } else {
+        accumulatedOutputTranscript = "";
+      }
+
+      // Handle session coordination cleanup
+      if (sessionCoordination.has(clientId)) {
+        const coordination = sessionCoordination.get(clientId);
+
+        // Remove this socket from coordination
+        if (sourceType === "input") {
+          coordination.inputSocketId = null;
+        } else {
+          coordination.outputSocketId = null;
+        }
+
+        // If both sockets are gone, clean up the database session
+        if (!coordination.inputSocketId && !coordination.outputSocketId) {
+          await transcriptService.cleanupSession(
+            coordination.dbSession.socketId
+          );
+          sessionCoordination.delete(clientId);
+          console.log(
+            `Cleaned up shared session ${coordination.dbSession.id} - all sockets disconnected`
+          );
+        } else {
+          console.log(
+            `Keeping session ${coordination.dbSession.id} active - other socket still connected`
+          );
+        }
+      } else {
+        // Fallback for sessions not using coordination
+        await transcriptService.cleanupSession(socket.id);
+      }
+    } else {
+      // Fallback cleanup
+      await transcriptService.cleanupSession(socket.id);
+    }
 
     transcriptionSessions.delete(socket.id);
   });

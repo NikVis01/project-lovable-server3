@@ -65,20 +65,23 @@ export function UnifiedTranscriptionRecorder() {
 
   // Session tracking
   const currentSessionIdRef = useRef<string | null>(null);
+  const clientIdRef = useRef<string>(
+    `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  );
 
   // Helper function to switch tabs with debouncing
   const switchTabWithDelay = (newTab: "input" | "output") => {
-    // Only switch if we're currently on a different tab
-    if (activeTab !== newTab) {
+    // Only switch if we're currently on a different tab and recording
+    if (activeTab !== newTab && isRecording) {
       // Clear any existing timeout
       if (tabSwitchTimeoutRef.current) {
         clearTimeout(tabSwitchTimeoutRef.current);
       }
 
-      // Set a new timeout to switch tabs
+      // Set a new timeout to switch tabs - only if there's significant content
       tabSwitchTimeoutRef.current = setTimeout(() => {
         setActiveTab(newTab);
-      }, 300); // 300ms delay to avoid rapid switching
+      }, 1000); // 1 second delay to avoid rapid switching and ensure significant content
     }
   };
 
@@ -183,8 +186,8 @@ export function UnifiedTranscriptionRecorder() {
     micSocket.on("transcription-result", (data: TranscriptionResult) => {
       console.log("Microphone transcription result:", data);
 
-      // Auto-switch to input tab when microphone transcription comes in
-      if (data.transcript && data.transcript.trim()) {
+      // Auto-switch to input tab when microphone transcription comes in (only for significant content)
+      if (data.transcript && data.transcript.trim().length > 10) {
         switchTabWithDelay("input");
       }
 
@@ -210,8 +213,8 @@ export function UnifiedTranscriptionRecorder() {
     systemSocket.on("transcription-result", (data: TranscriptionResult) => {
       console.log("System audio transcription result:", data);
 
-      // Auto-switch to output tab when system audio transcription comes in
-      if (data.transcript && data.transcript.trim()) {
+      // Auto-switch to output tab when system audio transcription comes in (only for significant content)
+      if (data.transcript && data.transcript.trim().length > 10) {
         switchTabWithDelay("output");
       }
 
@@ -370,6 +373,7 @@ export function UnifiedTranscriptionRecorder() {
         languageCode: "en-US",
         sampleRateHertz: 16000,
         sourceType: "output",
+        clientId: clientIdRef.current,
       });
     }
 
@@ -445,6 +449,7 @@ export function UnifiedTranscriptionRecorder() {
         languageCode: "en-US",
         sampleRateHertz: 16000,
         sourceType: "input",
+        clientId: clientIdRef.current,
       });
     }
   };
