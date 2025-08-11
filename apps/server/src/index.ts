@@ -6,6 +6,7 @@ import { Server } from "socket.io";
 import { SpeechService } from "./services/speech.service.js";
 import { transcriptService } from "./services/transcript.service.js";
 import { appRouter } from "./routers/index.js";
+import { agentRouter } from "./routers/agent.router.js";
 
 const app = express();
 const server = createServer(app);
@@ -32,6 +33,8 @@ app.use("/uploads", express.static("uploads"));
 
 // Mount API routes
 app.use(appRouter);
+// Mount agent routes (POST /api/analyze/:sessionId)
+app.use("/api", agentRouter);
 
 app.get("/", (_req, res) => {
   res.status(200).send("OK");
