@@ -81,6 +81,31 @@ export function AgentManager() {
     },
   });
 
+  // Sales client personality selection (Dove/Peacock/Owl/Eagle)
+  const [clientPersonality, setClientPersonality] = useState<
+    "" | "dove" | "peacock" | "owl" | "eagle"
+  >("");
+  const personalityLabels: Record<
+    "dove" | "peacock" | "owl" | "eagle",
+    string
+  > = {
+    dove: "Dove — Amiable / Relationship-oriented",
+    peacock: "Peacock — Expressive / Social",
+    owl: "Owl — Analytical / Detail-oriented",
+    eagle: "Eagle — Driver / Results-oriented",
+  };
+  const personalitySnippets: Record<
+    "dove" | "peacock" | "owl" | "eagle",
+    string
+  > = {
+    dove: "Client personality: Dove (amiable, relationship-oriented). Traits: peaceful, cooperative, avoids conflict, values trust and stability. Selling approach: build rapport, be patient and reassuring, emphasize reliability and support, avoid aggressive tactics.",
+    peacock:
+      "Client personality: Peacock (expressive, social). Traits: outgoing, optimistic, talkative, enjoys recognition and excitement. Selling approach: be enthusiastic, use stories and visuals, let them speak, make it engaging and fun.",
+    owl: "Client personality: Owl (analytical, detail-oriented). Traits: logical, methodical, data-driven, cautious, needs facts before deciding. Selling approach: provide evidence and numbers, be precise, explain the process and tradeoffs, give time to analyze.",
+    eagle:
+      "Client personality: Eagle (driver, results-oriented). Traits: bold, decisive, competitive, goal-focused, fast-moving. Selling approach: get to the point, highlight ROI and outcomes, present next steps clearly, respect their time.",
+  };
+
   // State for selected voice preview
   const [selectedVoicePreview, setSelectedVoicePreview] = useState<
     string | null
@@ -219,13 +244,21 @@ export function AgentManager() {
 
     try {
       setIsCreating(true);
+      // Compose system prompt with optional client personality guidance
+      const personaSnippet = clientPersonality
+        ? `\n\n${personalitySnippets[clientPersonality]}`
+        : "";
+      const payload = {
+        ...newAgent,
+        system_prompt: `${newAgent.system_prompt}${personaSnippet}`.trim(),
+      };
 
       const response = await fetch(`${serverUrl}/api/elevenlabs/agents`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newAgent),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -247,6 +280,7 @@ export function AgentManager() {
           language: "en",
         },
       });
+      setClientPersonality("");
 
       // Reload agents and switch to manage tab
       await loadAgents();
@@ -389,6 +423,47 @@ export function AgentManager() {
                     <option value='ja'>Japanese</option>
                     <option value='ko'>Korean</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Client Personality (DISC birds) */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='client-personality'>Client Personality</Label>
+                  <select
+                    id='client-personality'
+                    className='w-full p-2 border rounded-md'
+                    value={clientPersonality}
+                    onChange={(e) =>
+                      setClientPersonality(
+                        e.target.value as
+                          | ""
+                          | "dove"
+                          | "peacock"
+                          | "owl"
+                          | "eagle"
+                      )
+                    }
+                  >
+                    <option value=''>None</option>
+                    <option value='dove'>
+                      🕊 Dove — Amiable / Relationship-oriented
+                    </option>
+                    <option value='peacock'>
+                      🦚 Peacock — Expressive / Social
+                    </option>
+                    <option value='owl'>
+                      🦉 Owl — Analytical / Detail-oriented
+                    </option>
+                    <option value='eagle'>
+                      🦅 Eagle — Driver / Results-oriented
+                    </option>
+                  </select>
+                  {clientPersonality && (
+                    <p className='text-xs text-gray-600'>
+                      {personalityLabels[clientPersonality]}
+                    </p>
+                  )}
                 </div>
               </div>
 
