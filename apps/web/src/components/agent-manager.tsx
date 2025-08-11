@@ -1,0 +1,764 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  Bot,
+  Plus,
+  Settings,
+  Mic,
+  Save,
+  Trash2,
+  Copy,
+  Eye,
+  EyeOff,
+  Loader2,
+  AlertCircle,
+  User,
+  MessageSquare,
+} from "lucide-react";
+import { toast } from "sonner";
+
+interface Voice {
+  voice_id: string;
+  name: string;
+  category: string;
+  description?: string;
+  preview_url?: string;
+  labels?: Record<string, string>;
+}
+
+interface Agent {
+  agent_id: string;
+  name: string;
+  system_prompt: string;
+  voice_id: string;
+  voice_name?: string;
+  conversation_config?: {
+    agent_prompt?: string;
+    first_message?: string;
+    language?: string;
+  };
+  created_at?: string;
+}
+
+interface CreateAgentRequest {
+  name: string;
+  system_prompt: string;
+  voice_id: string;
+  conversation_config: {
+    agent_prompt: string;
+    first_message?: string;
+    language: string;
+  };
+}
+
+export function AgentManager() {
+  // State for voices
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [loadingVoices, setLoadingVoices] = useState(true);
+  const [voicesError, setVoicesError] = useState<string | null>(null);
+
+  // State for agents
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(true);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+
+  // State for creating new agent
+  const [isCreating, setIsCreating] = useState(false);
+  const [newAgent, setNewAgent] = useState<CreateAgentRequest>({
+    name: "",
+    system_prompt: "",
+    voice_id: "",
+    conversation_config: {
+      agent_prompt: "",
+      first_message: "Hello! How can I help you today?",
+      language: "en",
+    },
+  });
+
+  // State for selected voice preview
+  const [selectedVoicePreview, setSelectedVoicePreview] = useState<
+    string | null
+  >(null);
+  const [playingPreview, setPlayingPreview] = useState<string | null>(null);
+
+  // State for active tab
+  const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
+
+  // Visibility state for sensitive data
+  const [showSystemPrompts, setShowSystemPrompts] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  const serverUrl =
+    process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+
+  // Load voices on mount
+  useEffect(() => {
+    loadVoices();
+  }, []);
+
+  // Load agents on mount
+  useEffect(() => {
+    loadAgents();
+  }, []);
+
+  const loadVoices = async () => {
+    try {
+      setLoadingVoices(true);
+      setVoicesError(null);
+
+      const response = await fetch(`${serverUrl}/api/elevenlabs/voices`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to load voices");
+      }
+
+      const data = await response.json();
+      setVoices(data.voices || []);
+    } catch (error) {
+      console.error("Error loading voices:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load voices";
+      setVoicesError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoadingVoices(false);
+    }
+  };
+
+  const loadAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      setAgentsError(null);
+
+      const response = await fetch(`${serverUrl}/api/elevenlabs/agents`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to load agents");
+      }
+
+      const data = await response.json();
+      setAgents(data.agents || []);
+    } catch (error) {
+      console.error("Error loading agents:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to load agents";
+      setAgentsError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  const playVoicePreview = async (voiceId: string, voiceName: string) => {
+    try {
+      setPlayingPreview(voiceId);
+
+      const response = await fetch(
+        `${serverUrl}/api/elevenlabs/voice-preview`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            voice_id: voiceId,
+            text: `Hello! I'm ${voiceName}. This is how I sound.`,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate voice preview");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+
+      audio.onended = () => {
+        setPlayingPreview(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setPlayingPreview(null);
+        URL.revokeObjectURL(audioUrl);
+        toast.error("Failed to play voice preview");
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("Error playing voice preview:", error);
+      setPlayingPreview(null);
+      toast.error("Failed to play voice preview");
+    }
+  };
+
+  const createAgent = async () => {
+    if (!newAgent.name.trim()) {
+      toast.error("Please enter an agent name");
+      return;
+    }
+
+    if (!newAgent.system_prompt.trim()) {
+      toast.error("Please enter a system prompt");
+      return;
+    }
+
+    if (!newAgent.voice_id) {
+      toast.error("Please select a voice");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+
+      const response = await fetch(`${serverUrl}/api/elevenlabs/agents`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAgent),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create agent");
+      }
+
+      const createdAgent = await response.json();
+      toast.success(`Agent "${newAgent.name}" created successfully!`);
+
+      // Reset form
+      setNewAgent({
+        name: "",
+        system_prompt: "",
+        voice_id: "",
+        conversation_config: {
+          agent_prompt: "",
+          first_message: "Hello! How can I help you today?",
+          language: "en",
+        },
+      });
+
+      // Reload agents and switch to manage tab
+      await loadAgents();
+      setActiveTab("manage");
+    } catch (error) {
+      console.error("Error creating agent:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create agent";
+      toast.error(errorMessage);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const deleteAgent = async (agentId: string, agentName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to delete agent "${agentName}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${serverUrl}/api/elevenlabs/agents/${agentId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete agent");
+      }
+
+      toast.success(`Agent "${agentName}" deleted successfully`);
+      await loadAgents();
+    } catch (error) {
+      console.error("Error deleting agent:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete agent";
+      toast.error(errorMessage);
+    }
+  };
+
+  const copyAgentId = async (agentId: string) => {
+    try {
+      await navigator.clipboard.writeText(agentId);
+      toast.success("Agent ID copied to clipboard");
+    } catch (error) {
+      toast.error("Failed to copy Agent ID");
+    }
+  };
+
+  const toggleSystemPromptVisibility = (agentId: string) => {
+    setShowSystemPrompts((prev) => ({
+      ...prev,
+      [agentId]: !prev[agentId],
+    }));
+  };
+
+  const selectedVoice = voices.find((v) => v.voice_id === newAgent.voice_id);
+
+  return (
+    <div className='w-full space-y-6'>
+      {/* Header */}
+      <Card className='p-6'>
+        <div className='text-center'>
+          <h2 className='text-2xl font-bold mb-2 flex items-center justify-center gap-2'>
+            <Bot className='h-6 w-6' />
+            AI Agent Manager
+          </h2>
+          <p className='text-muted-foreground'>
+            Create and manage custom conversational AI agents with personalized
+            voices and prompts
+          </p>
+        </div>
+      </Card>
+
+      {/* Main Content */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as "create" | "manage")}
+      >
+        <TabsList className='grid w-full grid-cols-2'>
+          <TabsTrigger value='create' className='flex items-center gap-2'>
+            <Plus className='h-4 w-4' />
+            Create Agent
+          </TabsTrigger>
+          <TabsTrigger value='manage' className='flex items-center gap-2'>
+            <Settings className='h-4 w-4' />
+            Manage Agents
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Create Agent Tab */}
+        <TabsContent value='create' className='mt-6'>
+          <Card className='p-6'>
+            <div className='space-y-6'>
+              <h3 className='text-lg font-semibold'>Create New Agent</h3>
+
+              {/* Agent Basic Info */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='agent-name'>Agent Name *</Label>
+                  <Input
+                    id='agent-name'
+                    placeholder='e.g., Customer Support Bot'
+                    value={newAgent.name}
+                    onChange={(e) =>
+                      setNewAgent((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='language'>Language</Label>
+                  <select
+                    id='language'
+                    className='w-full p-2 border rounded-md'
+                    value={newAgent.conversation_config.language}
+                    onChange={(e) =>
+                      setNewAgent((prev) => ({
+                        ...prev,
+                        conversation_config: {
+                          ...prev.conversation_config,
+                          language: e.target.value,
+                        },
+                      }))
+                    }
+                  >
+                    <option value='en'>English</option>
+                    <option value='es'>Spanish</option>
+                    <option value='fr'>French</option>
+                    <option value='de'>German</option>
+                    <option value='it'>Italian</option>
+                    <option value='pt'>Portuguese</option>
+                    <option value='zh'>Chinese</option>
+                    <option value='ja'>Japanese</option>
+                    <option value='ko'>Korean</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* System Prompt */}
+              <div className='space-y-2'>
+                <Label htmlFor='system-prompt'>System Prompt *</Label>
+                <textarea
+                  id='system-prompt'
+                  className='w-full p-3 border rounded-md min-h-[120px]'
+                  placeholder="Define the agent's personality, role, and behavior. For example: 'You are a helpful customer support agent for an e-commerce company. You should be friendly, professional, and always try to resolve customer issues efficiently.'"
+                  value={newAgent.system_prompt}
+                  onChange={(e) =>
+                    setNewAgent((prev) => ({
+                      ...prev,
+                      system_prompt: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              {/* Agent Prompt (optional) */}
+              <div className='space-y-2'>
+                <Label htmlFor='agent-prompt'>
+                  Additional Instructions (optional)
+                </Label>
+                <textarea
+                  id='agent-prompt'
+                  className='w-full p-3 border rounded-md min-h-[80px]'
+                  placeholder='Additional conversation-specific instructions...'
+                  value={newAgent.conversation_config.agent_prompt}
+                  onChange={(e) =>
+                    setNewAgent((prev) => ({
+                      ...prev,
+                      conversation_config: {
+                        ...prev.conversation_config,
+                        agent_prompt: e.target.value,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              {/* First Message */}
+              <div className='space-y-2'>
+                <Label htmlFor='first-message'>First Message</Label>
+                <Input
+                  id='first-message'
+                  placeholder='How the agent will greet users'
+                  value={newAgent.conversation_config.first_message}
+                  onChange={(e) =>
+                    setNewAgent((prev) => ({
+                      ...prev,
+                      conversation_config: {
+                        ...prev.conversation_config,
+                        first_message: e.target.value,
+                      },
+                    }))
+                  }
+                />
+              </div>
+
+              {/* Voice Selection */}
+              <div className='space-y-4'>
+                <div className='flex items-center justify-between'>
+                  <Label>Select Voice *</Label>
+                  {loadingVoices && (
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  )}
+                </div>
+
+                {voicesError ? (
+                  <div className='flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md'>
+                    <AlertCircle className='h-4 w-4 text-red-500' />
+                    <span className='text-red-700 text-sm'>{voicesError}</span>
+                    <Button
+                      onClick={loadVoices}
+                      variant='outline'
+                      size='sm'
+                      className='ml-auto'
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto'>
+                    {voices.map((voice) => (
+                      <Card
+                        key={voice.voice_id}
+                        className={`p-3 cursor-pointer transition-all ${
+                          newAgent.voice_id === voice.voice_id
+                            ? "ring-2 ring-blue-500 bg-blue-50"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() =>
+                          setNewAgent((prev) => ({
+                            ...prev,
+                            voice_id: voice.voice_id,
+                          }))
+                        }
+                      >
+                        <div className='flex items-center justify-between'>
+                          <div className='flex-1'>
+                            <h4 className='font-medium text-sm'>
+                              {voice.name}
+                            </h4>
+                            <p className='text-xs text-gray-600'>
+                              {voice.category}
+                            </p>
+                            {voice.description && (
+                              <p className='text-xs text-gray-500 mt-1 line-clamp-2'>
+                                {voice.description}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playVoicePreview(voice.voice_id, voice.name);
+                            }}
+                            disabled={playingPreview === voice.voice_id}
+                          >
+                            {playingPreview === voice.voice_id ? (
+                              <Loader2 className='h-4 w-4 animate-spin' />
+                            ) : (
+                              <Mic className='h-4 w-4' />
+                            )}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {selectedVoice && (
+                  <div className='p-3 bg-blue-50 border border-blue-200 rounded-md'>
+                    <p className='text-sm text-blue-800'>
+                      <strong>Selected:</strong> {selectedVoice.name} (
+                      {selectedVoice.category})
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Create Button */}
+              <div className='flex justify-end'>
+                <Button
+                  onClick={createAgent}
+                  disabled={
+                    isCreating ||
+                    !newAgent.name.trim() ||
+                    !newAgent.system_prompt.trim() ||
+                    !newAgent.voice_id
+                  }
+                  className='flex items-center gap-2'
+                >
+                  {isCreating ? (
+                    <>
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className='h-4 w-4' />
+                      Create Agent
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Manage Agents Tab */}
+        <TabsContent value='manage' className='mt-6'>
+          <Card className='p-6'>
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-lg font-semibold'>Your Agents</h3>
+                <Button
+                  onClick={loadAgents}
+                  variant='outline'
+                  size='sm'
+                  disabled={loadingAgents}
+                >
+                  {loadingAgents ? (
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                  ) : (
+                    "Refresh"
+                  )}
+                </Button>
+              </div>
+
+              {agentsError ? (
+                <div className='flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md'>
+                  <AlertCircle className='h-4 w-4 text-red-500' />
+                  <span className='text-red-700 text-sm'>{agentsError}</span>
+                  <Button
+                    onClick={loadAgents}
+                    variant='outline'
+                    size='sm'
+                    className='ml-auto'
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : agents.length === 0 ? (
+                <div className='text-center py-12 text-gray-500'>
+                  <Bot className='h-12 w-12 mx-auto mb-4 text-gray-400' />
+                  <p>No agents created yet.</p>
+                  <p className='text-sm'>
+                    Create your first agent in the "Create Agent" tab.
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {agents.map((agent) => (
+                    <Card key={agent.agent_id} className='p-4'>
+                      <div className='space-y-3'>
+                        {/* Agent Header */}
+                        <div className='flex items-center justify-between'>
+                          <div className='flex items-center gap-3'>
+                            <Bot className='h-5 w-5 text-blue-500' />
+                            <div>
+                              <h4 className='font-medium'>{agent.name}</h4>
+                              <p className='text-sm text-gray-600'>
+                                Voice: {agent.voice_name || "Unknown"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className='flex items-center gap-2'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => copyAgentId(agent.agent_id)}
+                            >
+                              <Copy className='h-4 w-4' />
+                              Copy ID
+                            </Button>
+                            <Button
+                              variant='destructive'
+                              size='sm'
+                              onClick={() =>
+                                deleteAgent(agent.agent_id, agent.name)
+                              }
+                            >
+                              <Trash2 className='h-4 w-4' />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Agent Details */}
+                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                          <div>
+                            <Label className='text-xs font-medium text-gray-600'>
+                              Agent ID
+                            </Label>
+                            <p className='font-mono text-xs break-all bg-gray-100 p-2 rounded'>
+                              {agent.agent_id}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className='text-xs font-medium text-gray-600'>
+                              Language
+                            </Label>
+                            <p>{agent.conversation_config?.language || "en"}</p>
+                          </div>
+                        </div>
+
+                        {/* First Message */}
+                        {agent.conversation_config?.first_message && (
+                          <div>
+                            <Label className='text-xs font-medium text-gray-600 flex items-center gap-1'>
+                              <MessageSquare className='h-3 w-3' />
+                              First Message
+                            </Label>
+                            <p className='text-sm bg-gray-50 p-2 rounded'>
+                              {agent.conversation_config.first_message}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* System Prompt */}
+                        <div>
+                          <div className='flex items-center justify-between mb-2'>
+                            <Label className='text-xs font-medium text-gray-600 flex items-center gap-1'>
+                              <User className='h-3 w-3' />
+                              System Prompt
+                            </Label>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                toggleSystemPromptVisibility(agent.agent_id)
+                              }
+                            >
+                              {showSystemPrompts[agent.agent_id] ? (
+                                <EyeOff className='h-4 w-4' />
+                              ) : (
+                                <Eye className='h-4 w-4' />
+                              )}
+                            </Button>
+                          </div>
+                          <div className='text-sm bg-gray-50 p-3 rounded'>
+                            {showSystemPrompts[agent.agent_id] ? (
+                              <p className='whitespace-pre-wrap'>
+                                {agent.system_prompt}
+                              </p>
+                            ) : (
+                              <p className='text-gray-500 italic'>
+                                Click the eye icon to view system prompt
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Additional Instructions */}
+                        {agent.conversation_config?.agent_prompt && (
+                          <div>
+                            <Label className='text-xs font-medium text-gray-600'>
+                              Additional Instructions
+                            </Label>
+                            <p className='text-sm bg-gray-50 p-2 rounded'>
+                              {agent.conversation_config.agent_prompt}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Instructions */}
+      <Card className='p-4 bg-blue-50 border-blue-200'>
+        <h4 className='font-medium mb-2 text-blue-800'>
+          🤖 How to Use Agent Manager:
+        </h4>
+        <ul className='text-sm text-blue-700 space-y-1'>
+          <li>
+            • <strong>Create Agent:</strong> Define your agent's personality
+            with a system prompt and choose a voice
+          </li>
+          <li>
+            • <strong>System Prompt:</strong> This sets the agent's behavior,
+            personality, and role
+          </li>
+          <li>
+            • <strong>Voice Selection:</strong> Click on any voice to select it,
+            use the mic button to preview
+          </li>
+          <li>
+            • <strong>First Message:</strong> What the agent says when starting
+            a conversation
+          </li>
+          <li>
+            • <strong>Agent ID:</strong> Copy the Agent ID to use with the
+            conversational AI component
+          </li>
+          <li>
+            • <strong>Languages:</strong> Agents can be configured for different
+            languages
+          </li>
+        </ul>
+      </Card>
+    </div>
+  );
+}
