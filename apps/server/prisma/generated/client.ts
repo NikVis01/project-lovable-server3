@@ -46,6 +46,11 @@ path.join(process.cwd(), "prisma/generated/libquery_engine-darwin-arm64.dylib.no
  * 
  */
 export type TranscriptSession = Prisma.TranscriptSessionModel
+/**
+ * Model ConvAIAgent
+ * Stores created ElevenLabs Conversational AI agents for auditing/ownership
+ */
+export type ConvAIAgent = Prisma.ConvAIAgentModel
 
 export type SessionStatus = $Enums.SessionStatus
 export const SessionStatus = $Enums.SessionStatus

@@ -30,3 +30,17 @@ enum SessionStatus {
   ENDED
   ERROR
 }
+
+/// Stores created ElevenLabs Conversational AI agents for auditing/ownership
+model ConvAIAgent {
+  id        String   @id @default(cuid())
+  agentId   String   @unique
+  userId    String?
+  name      String?
+  voiceId   String?
+  config    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("convai_agents")
+}

@@ -394,7 +394,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
-  TranscriptSession: 'TranscriptSession'
+  TranscriptSession: 'TranscriptSession',
+  ConvAIAgent: 'ConvAIAgent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -410,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "transcriptSession"
+    modelProps: "transcriptSession" | "convAIAgent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -488,6 +489,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ConvAIAgent: {
+      payload: Prisma.$ConvAIAgentPayload<ExtArgs>
+      fields: Prisma.ConvAIAgentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ConvAIAgentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ConvAIAgentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        findFirst: {
+          args: Prisma.ConvAIAgentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ConvAIAgentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        findMany: {
+          args: Prisma.ConvAIAgentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>[]
+        }
+        create: {
+          args: Prisma.ConvAIAgentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        createMany: {
+          args: Prisma.ConvAIAgentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ConvAIAgentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>[]
+        }
+        delete: {
+          args: Prisma.ConvAIAgentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        update: {
+          args: Prisma.ConvAIAgentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ConvAIAgentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ConvAIAgentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ConvAIAgentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>[]
+        }
+        upsert: {
+          args: Prisma.ConvAIAgentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ConvAIAgentPayload>
+        }
+        aggregate: {
+          args: Prisma.ConvAIAgentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateConvAIAgent>
+        }
+        groupBy: {
+          args: Prisma.ConvAIAgentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ConvAIAgentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ConvAIAgentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ConvAIAgentCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -544,12 +619,34 @@ export const TranscriptSessionScalarFieldEnum = {
 export type TranscriptSessionScalarFieldEnum = (typeof TranscriptSessionScalarFieldEnum)[keyof typeof TranscriptSessionScalarFieldEnum]
 
 
+export const ConvAIAgentScalarFieldEnum = {
+  id: 'id',
+  agentId: 'agentId',
+  userId: 'userId',
+  name: 'name',
+  voiceId: 'voiceId',
+  config: 'config',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ConvAIAgentScalarFieldEnum = (typeof ConvAIAgentScalarFieldEnum)[keyof typeof ConvAIAgentScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {
@@ -566,6 +663,15 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 
@@ -613,6 +719,20 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Json'
+ */
+export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+/**
+ * Reference to a field of type 'QueryMode'
+ */
+export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -713,6 +833,7 @@ export interface PrismaClientOptions {
 }
 export type GlobalOmitConfig = {
   transcriptSession?: Prisma.TranscriptSessionOmit
+  convAIAgent?: Prisma.ConvAIAgentOmit
 }
 
 /* Types for Logging */

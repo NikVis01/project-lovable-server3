@@ -8,4 +8,5 @@
  * 🟢 You can import this file directly.
  */
 export type * from './models/TranscriptSession'
+export type * from './models/ConvAIAgent'
 export type * from './commonInputTypes'

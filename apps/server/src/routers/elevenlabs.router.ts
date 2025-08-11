@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { z } from "zod";
+import prisma from "../../prisma/index.js";
 
 const elevenlabsRouter: Router = Router();
 
@@ -312,6 +313,34 @@ elevenlabsRouter.post("/agents", async (req: Request, res: Response) => {
     }
 
     const data = await response.json();
+
+    // Persist locally (best-effort)
+    try {
+      const createdAgentId: string | undefined =
+        (data as any)?.agent_id || (data as any)?.agentId || (data as any)?.id;
+      if (createdAgentId) {
+        const derivedVoiceId: string | undefined =
+          (incoming as any)?.tts?.voice_id || voice_id;
+        await prisma.convAIAgent.upsert({
+          where: { agentId: createdAgentId },
+          update: {
+            name,
+            voiceId: derivedVoiceId,
+            config: (incoming as any) ?? undefined,
+          },
+          create: {
+            agentId: createdAgentId,
+            userId: (req.body?.userId as string | undefined) ?? null,
+            name,
+            voiceId: derivedVoiceId,
+            config: (incoming as any) ?? undefined,
+          },
+        });
+      }
+    } catch (dbErr) {
+      console.warn("Failed to persist ConvAIAgent locally:", dbErr);
+    }
+
     res.json(data);
   } catch (error) {
     console.error("Error creating agent:", error);
@@ -350,6 +379,13 @@ elevenlabsRouter.delete(
         return res.status(500).json({
           error: "Failed to delete agent",
         });
+      }
+
+      // Best-effort local cleanup
+      try {
+        await prisma.convAIAgent.delete({ where: { agentId } });
+      } catch (dbErr) {
+        // ignore if not found
       }
 
       res.json({ success: true });
