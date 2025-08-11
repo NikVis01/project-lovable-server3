@@ -18,7 +18,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
 interface ConversationMessage {
@@ -35,10 +34,7 @@ export function ConversationalAI() {
     process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || ""
   );
   const [userId, setUserId] = useState("");
-  const [connectionType, setConnectionType] = useState<"websocket" | "webrtc">(
-    "webrtc"
-  );
-  const [volume, setVolume] = useState(0.8);
+  // Always use WebRTC
   const [isMuted, setIsMuted] = useState(false);
 
   // Agents list
@@ -242,58 +238,33 @@ export function ConversationalAI() {
     try {
       let conversationId: string;
 
-      if (connectionType === "websocket") {
-        // Get signed URL from our backend
-        const serverUrl =
-          process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
-        const response = await fetch(
-          `${serverUrl}/api/elevenlabs/signed-url?agentId=${encodeURIComponent(
-            agentId
-          )}${userId ? `&userId=${encodeURIComponent(userId)}` : ""}`
-        );
+      // Always use WebRTC
+      const serverUrl =
+        process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+      const response = await fetch(
+        `${serverUrl}/api/elevenlabs/conversation-token?agentId=${encodeURIComponent(
+          agentId
+        )}${userId ? `&userId=${encodeURIComponent(userId)}` : ""}`
+      );
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to get signed URL");
-        }
-
-        const { signedUrl } = await response.json();
-
-        conversationId = await conversation.startSession({
-          signedUrl,
-          connectionType: "websocket",
-        });
-      } else {
-        // Get conversation token from our backend
-        const serverUrl =
-          process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
-        const response = await fetch(
-          `${serverUrl}/api/elevenlabs/conversation-token?agentId=${encodeURIComponent(
-            agentId
-          )}${userId ? `&userId=${encodeURIComponent(userId)}` : ""}`
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || "Failed to get conversation token"
-          );
-        }
-
-        const { conversationToken } = await response.json();
-
-        conversationId = await conversation.startSession({
-          conversationToken,
-          connectionType: "webrtc",
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to get conversation token");
       }
+
+      const { conversationToken } = await response.json();
+
+      conversationId = await conversation.startSession({
+        conversationToken,
+        connectionType: "webrtc",
+      });
 
       setCurrentConversationId(conversationId);
       addMessage("Conversation started", "system");
 
-      // Set initial volume
+      // Set initial volume to 100% (or 0 if muted)
       if (conversation.setVolume) {
-        await conversation.setVolume({ volume: isMuted ? 0 : volume });
+        await conversation.setVolume({ volume: isMuted ? 0 : 1 });
       }
     } catch (error) {
       console.error("Error starting conversation:", error);
@@ -324,23 +295,11 @@ export function ConversationalAI() {
 
     if (conversation.setVolume) {
       try {
-        await conversation.setVolume({ volume: newMutedState ? 0 : volume });
+        await conversation.setVolume({ volume: newMutedState ? 0 : 1 });
         toast.info(newMutedState ? "Muted" : "Unmuted");
       } catch (error) {
         console.error("Error setting volume:", error);
         toast.error("Error changing volume");
-      }
-    }
-  };
-
-  const handleVolumeChange = async (newVolume: number) => {
-    setVolume(newVolume);
-
-    if (conversation.setVolume && !isMuted) {
-      try {
-        await conversation.setVolume({ volume: newVolume });
-      } catch (error) {
-        console.error("Error setting volume:", error);
       }
     }
   };
@@ -389,55 +348,17 @@ export function ConversationalAI() {
                     ))
                   )}
                 </select>
-                <Button
-                  onClick={refreshAgents}
-                  variant='outline'
-                  disabled={loadingAgents || isConnected}
-                >
-                  {loadingAgents ? "Loading" : "Refresh"}
-                </Button>
               </div>
               {agentsError && (
                 <p className='text-xs text-red-600'>{agentsError}</p>
               )}
             </div>
 
-            <div className='space-y-2'>
-              <Label htmlFor='userId'>User ID</Label>
-              <Input id='userId' value={userId} disabled />
-            </div>
+            {/* User ID removed; using hard-coded default until auth is implemented */}
 
-            <div className='space-y-2'>
-              <Label htmlFor='connectionType'>Connection Type</Label>
-              <select
-                id='connectionType'
-                className='w-full p-2 border rounded-md'
-                value={connectionType}
-                onChange={(e) =>
-                  setConnectionType(e.target.value as "websocket" | "webrtc")
-                }
-                disabled={isConnected}
-              >
-                <option value='webrtc'>WebRTC (Recommended)</option>
-                <option value='websocket'>WebSocket</option>
-              </select>
-            </div>
+            {/* Connection type removed; WebRTC enforced */}
 
-            <div className='space-y-2'>
-              <Label htmlFor='volume'>
-                Volume: {Math.round(volume * 100)}%
-              </Label>
-              <input
-                id='volume'
-                type='range'
-                min='0'
-                max='1'
-                step='0.1'
-                value={volume}
-                onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                className='w-full'
-              />
-            </div>
+            {/* Volume slider removed; audio is always 100% unless muted */}
           </div>
 
           {/* Control Buttons */}
