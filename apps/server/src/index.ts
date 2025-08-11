@@ -15,14 +15,17 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.CORS_ORIGIN || "http://localhost:3001",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
     credentials: true,
   },
 });
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "",
-    methods: ["GET", "POST", "OPTIONS"],
+    origin: process.env.CORS_ORIGIN || "http://localhost:3001",
+    methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    optionsSuccessStatus: 204,
   })
 );
 
