@@ -29,6 +29,8 @@ export type TranscriptSessionMinAggregateOutputType = {
   languageCode: string | null
   transcriptInput: string | null
   transcriptOutput: string | null
+  audioInputUrl: string | null
+  audioOutputUrl: string | null
   status: $Enums.SessionStatus | null
   startedAt: Date | null
   endedAt: Date | null
@@ -41,6 +43,8 @@ export type TranscriptSessionMaxAggregateOutputType = {
   languageCode: string | null
   transcriptInput: string | null
   transcriptOutput: string | null
+  audioInputUrl: string | null
+  audioOutputUrl: string | null
   status: $Enums.SessionStatus | null
   startedAt: Date | null
   endedAt: Date | null
@@ -53,6 +57,8 @@ export type TranscriptSessionCountAggregateOutputType = {
   languageCode: number
   transcriptInput: number
   transcriptOutput: number
+  audioInputUrl: number
+  audioOutputUrl: number
   status: number
   startedAt: number
   endedAt: number
@@ -67,6 +73,8 @@ export type TranscriptSessionMinAggregateInputType = {
   languageCode?: true
   transcriptInput?: true
   transcriptOutput?: true
+  audioInputUrl?: true
+  audioOutputUrl?: true
   status?: true
   startedAt?: true
   endedAt?: true
@@ -79,6 +87,8 @@ export type TranscriptSessionMaxAggregateInputType = {
   languageCode?: true
   transcriptInput?: true
   transcriptOutput?: true
+  audioInputUrl?: true
+  audioOutputUrl?: true
   status?: true
   startedAt?: true
   endedAt?: true
@@ -91,6 +101,8 @@ export type TranscriptSessionCountAggregateInputType = {
   languageCode?: true
   transcriptInput?: true
   transcriptOutput?: true
+  audioInputUrl?: true
+  audioOutputUrl?: true
   status?: true
   startedAt?: true
   endedAt?: true
@@ -176,6 +188,8 @@ export type TranscriptSessionGroupByOutputType = {
   languageCode: string
   transcriptInput: string | null
   transcriptOutput: string | null
+  audioInputUrl: string | null
+  audioOutputUrl: string | null
   status: $Enums.SessionStatus
   startedAt: Date
   endedAt: Date | null
@@ -209,6 +223,8 @@ export type TranscriptSessionWhereInput = {
   languageCode?: Prisma.StringFilter<"TranscriptSession"> | string
   transcriptInput?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
   transcriptOutput?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
+  audioInputUrl?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
+  audioOutputUrl?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
   status?: Prisma.EnumSessionStatusFilter<"TranscriptSession"> | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFilter<"TranscriptSession"> | Date | string
   endedAt?: Prisma.DateTimeNullableFilter<"TranscriptSession"> | Date | string | null
@@ -221,6 +237,8 @@ export type TranscriptSessionOrderByWithRelationInput = {
   languageCode?: Prisma.SortOrder
   transcriptInput?: Prisma.SortOrderInput | Prisma.SortOrder
   transcriptOutput?: Prisma.SortOrderInput | Prisma.SortOrder
+  audioInputUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  audioOutputUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -236,6 +254,8 @@ export type TranscriptSessionWhereUniqueInput = Prisma.AtLeast<{
   languageCode?: Prisma.StringFilter<"TranscriptSession"> | string
   transcriptInput?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
   transcriptOutput?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
+  audioInputUrl?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
+  audioOutputUrl?: Prisma.StringNullableFilter<"TranscriptSession"> | string | null
   status?: Prisma.EnumSessionStatusFilter<"TranscriptSession"> | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFilter<"TranscriptSession"> | Date | string
   endedAt?: Prisma.DateTimeNullableFilter<"TranscriptSession"> | Date | string | null
@@ -248,6 +268,8 @@ export type TranscriptSessionOrderByWithAggregationInput = {
   languageCode?: Prisma.SortOrder
   transcriptInput?: Prisma.SortOrderInput | Prisma.SortOrder
   transcriptOutput?: Prisma.SortOrderInput | Prisma.SortOrder
+  audioInputUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  audioOutputUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -266,6 +288,8 @@ export type TranscriptSessionScalarWhereWithAggregatesInput = {
   languageCode?: Prisma.StringWithAggregatesFilter<"TranscriptSession"> | string
   transcriptInput?: Prisma.StringNullableWithAggregatesFilter<"TranscriptSession"> | string | null
   transcriptOutput?: Prisma.StringNullableWithAggregatesFilter<"TranscriptSession"> | string | null
+  audioInputUrl?: Prisma.StringNullableWithAggregatesFilter<"TranscriptSession"> | string | null
+  audioOutputUrl?: Prisma.StringNullableWithAggregatesFilter<"TranscriptSession"> | string | null
   status?: Prisma.EnumSessionStatusWithAggregatesFilter<"TranscriptSession"> | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeWithAggregatesFilter<"TranscriptSession"> | Date | string
   endedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"TranscriptSession"> | Date | string | null
@@ -278,6 +302,8 @@ export type TranscriptSessionCreateInput = {
   languageCode?: string
   transcriptInput?: string | null
   transcriptOutput?: string | null
+  audioInputUrl?: string | null
+  audioOutputUrl?: string | null
   status?: $Enums.SessionStatus
   startedAt?: Date | string
   endedAt?: Date | string | null
@@ -290,6 +316,8 @@ export type TranscriptSessionUncheckedCreateInput = {
   languageCode?: string
   transcriptInput?: string | null
   transcriptOutput?: string | null
+  audioInputUrl?: string | null
+  audioOutputUrl?: string | null
   status?: $Enums.SessionStatus
   startedAt?: Date | string
   endedAt?: Date | string | null
@@ -302,6 +330,8 @@ export type TranscriptSessionUpdateInput = {
   languageCode?: Prisma.StringFieldUpdateOperationsInput | string
   transcriptInput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transcriptOutput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioInputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioOutputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -314,6 +344,8 @@ export type TranscriptSessionUncheckedUpdateInput = {
   languageCode?: Prisma.StringFieldUpdateOperationsInput | string
   transcriptInput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transcriptOutput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioInputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioOutputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -326,6 +358,8 @@ export type TranscriptSessionCreateManyInput = {
   languageCode?: string
   transcriptInput?: string | null
   transcriptOutput?: string | null
+  audioInputUrl?: string | null
+  audioOutputUrl?: string | null
   status?: $Enums.SessionStatus
   startedAt?: Date | string
   endedAt?: Date | string | null
@@ -338,6 +372,8 @@ export type TranscriptSessionUpdateManyMutationInput = {
   languageCode?: Prisma.StringFieldUpdateOperationsInput | string
   transcriptInput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transcriptOutput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioInputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioOutputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -350,6 +386,8 @@ export type TranscriptSessionUncheckedUpdateManyInput = {
   languageCode?: Prisma.StringFieldUpdateOperationsInput | string
   transcriptInput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transcriptOutput?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioInputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  audioOutputUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSessionStatusFieldUpdateOperationsInput | $Enums.SessionStatus
   startedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   endedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -362,6 +400,8 @@ export type TranscriptSessionCountOrderByAggregateInput = {
   languageCode?: Prisma.SortOrder
   transcriptInput?: Prisma.SortOrder
   transcriptOutput?: Prisma.SortOrder
+  audioInputUrl?: Prisma.SortOrder
+  audioOutputUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
@@ -374,6 +414,8 @@ export type TranscriptSessionMaxOrderByAggregateInput = {
   languageCode?: Prisma.SortOrder
   transcriptInput?: Prisma.SortOrder
   transcriptOutput?: Prisma.SortOrder
+  audioInputUrl?: Prisma.SortOrder
+  audioOutputUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
@@ -386,6 +428,8 @@ export type TranscriptSessionMinOrderByAggregateInput = {
   languageCode?: Prisma.SortOrder
   transcriptInput?: Prisma.SortOrder
   transcriptOutput?: Prisma.SortOrder
+  audioInputUrl?: Prisma.SortOrder
+  audioOutputUrl?: Prisma.SortOrder
   status?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   endedAt?: Prisma.SortOrder
@@ -420,6 +464,8 @@ export type TranscriptSessionSelect<ExtArgs extends runtime.Types.Extensions.Int
   languageCode?: boolean
   transcriptInput?: boolean
   transcriptOutput?: boolean
+  audioInputUrl?: boolean
+  audioOutputUrl?: boolean
   status?: boolean
   startedAt?: boolean
   endedAt?: boolean
@@ -432,6 +478,8 @@ export type TranscriptSessionSelectCreateManyAndReturn<ExtArgs extends runtime.T
   languageCode?: boolean
   transcriptInput?: boolean
   transcriptOutput?: boolean
+  audioInputUrl?: boolean
+  audioOutputUrl?: boolean
   status?: boolean
   startedAt?: boolean
   endedAt?: boolean
@@ -444,6 +492,8 @@ export type TranscriptSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   languageCode?: boolean
   transcriptInput?: boolean
   transcriptOutput?: boolean
+  audioInputUrl?: boolean
+  audioOutputUrl?: boolean
   status?: boolean
   startedAt?: boolean
   endedAt?: boolean
@@ -456,13 +506,15 @@ export type TranscriptSessionSelectScalar = {
   languageCode?: boolean
   transcriptInput?: boolean
   transcriptOutput?: boolean
+  audioInputUrl?: boolean
+  audioOutputUrl?: boolean
   status?: boolean
   startedAt?: boolean
   endedAt?: boolean
   updatedAt?: boolean
 }
 
-export type TranscriptSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "socketId" | "languageCode" | "transcriptInput" | "transcriptOutput" | "status" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["transcriptSession"]>
+export type TranscriptSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "socketId" | "languageCode" | "transcriptInput" | "transcriptOutput" | "audioInputUrl" | "audioOutputUrl" | "status" | "startedAt" | "endedAt" | "updatedAt", ExtArgs["result"]["transcriptSession"]>
 
 export type $TranscriptSessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TranscriptSession"
@@ -473,6 +525,8 @@ export type $TranscriptSessionPayload<ExtArgs extends runtime.Types.Extensions.I
     languageCode: string
     transcriptInput: string | null
     transcriptOutput: string | null
+    audioInputUrl: string | null
+    audioOutputUrl: string | null
     status: $Enums.SessionStatus
     startedAt: Date
     endedAt: Date | null
@@ -905,6 +959,8 @@ export interface TranscriptSessionFieldRefs {
   readonly languageCode: Prisma.FieldRef<"TranscriptSession", 'String'>
   readonly transcriptInput: Prisma.FieldRef<"TranscriptSession", 'String'>
   readonly transcriptOutput: Prisma.FieldRef<"TranscriptSession", 'String'>
+  readonly audioInputUrl: Prisma.FieldRef<"TranscriptSession", 'String'>
+  readonly audioOutputUrl: Prisma.FieldRef<"TranscriptSession", 'String'>
   readonly status: Prisma.FieldRef<"TranscriptSession", 'SessionStatus'>
   readonly startedAt: Prisma.FieldRef<"TranscriptSession", 'DateTime'>
   readonly endedAt: Prisma.FieldRef<"TranscriptSession", 'DateTime'>

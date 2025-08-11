@@ -533,6 +533,8 @@ export const TranscriptSessionScalarFieldEnum = {
   languageCode: 'languageCode',
   transcriptInput: 'transcriptInput',
   transcriptOutput: 'transcriptOutput',
+  audioInputUrl: 'audioInputUrl',
+  audioOutputUrl: 'audioOutputUrl',
   status: 'status',
   startedAt: 'startedAt',
   endedAt: 'endedAt',

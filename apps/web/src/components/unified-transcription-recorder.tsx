@@ -37,6 +37,11 @@ export function UnifiedTranscriptionRecorder() {
   >([]);
   const [currentOutputInterim, setCurrentOutputInterim] = useState("");
 
+  // Audio playback states
+  const [inputAudioUrl, setInputAudioUrl] = useState<string | null>(null);
+  const [outputAudioUrl, setOutputAudioUrl] = useState<string | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+
   // Browser support
   const [microphoneSupported, setMicrophoneSupported] = useState(true);
   const [systemAudioSupported, setSystemAudioSupported] = useState(true);
@@ -45,14 +50,43 @@ export function UnifiedTranscriptionRecorder() {
   const micMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const micSocketRef = useRef<Socket | null>(null);
+  const micAudioChunksRef = useRef<Blob[]>([]);
 
   // Refs for system audio recording
   const systemMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const systemStreamRef = useRef<MediaStream | null>(null);
   const systemDisplayStreamRef = useRef<MediaStream | null>(null);
   const systemSocketRef = useRef<Socket | null>(null);
+  const systemAudioChunksRef = useRef<Blob[]>([]);
 
-  const audioChunksRef = useRef<Blob[]>([]);
+  // Session tracking
+  const currentSessionIdRef = useRef<string | null>(null);
+
+  // Load session audio URLs
+  const loadSessionAudio = async (sessionId: string) => {
+    try {
+      setIsLoadingAudio(true);
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000"
+        }/api/transcripts/${sessionId}`
+      );
+
+      if (response.ok) {
+        const sessionData = await response.json();
+        if (sessionData.audioInputUrl) {
+          setInputAudioUrl(sessionData.audioInputUrl);
+        }
+        if (sessionData.audioOutputUrl) {
+          setOutputAudioUrl(sessionData.audioOutputUrl);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading session audio:", error);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
 
   // Check browser compatibility on mount
   useEffect(() => {
@@ -114,6 +148,16 @@ export function UnifiedTranscriptionRecorder() {
     micSocket.on("disconnect", () => {
       console.log("Disconnected from microphone server");
       setIsConnected(false);
+    });
+
+    micSocket.on("transcription-started", (data: { sessionId: string }) => {
+      console.log(
+        "Microphone transcription started with session:",
+        data.sessionId
+      );
+      currentSessionIdRef.current = data.sessionId;
+      // Load existing audio URLs if any
+      loadSessionAudio(data.sessionId);
     });
 
     micSocket.on("transcription-result", (data: TranscriptionResult) => {
@@ -263,6 +307,9 @@ export function UnifiedTranscriptionRecorder() {
 
     systemMediaRecorderRef.current.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        // Store chunk for full recording
+        systemAudioChunksRef.current.push(event.data);
+
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
@@ -277,7 +324,7 @@ export function UnifiedTranscriptionRecorder() {
     };
 
     systemMediaRecorderRef.current.onstop = () => {
-      audioChunksRef.current = [];
+      console.log("System audio recording stopped");
     };
 
     systemMediaRecorderRef.current.start(250);
@@ -339,6 +386,9 @@ export function UnifiedTranscriptionRecorder() {
 
     micMediaRecorderRef.current.ondataavailable = (event) => {
       if (event.data.size > 0) {
+        // Store chunk for full recording
+        micAudioChunksRef.current.push(event.data);
+
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
@@ -364,7 +414,88 @@ export function UnifiedTranscriptionRecorder() {
     }
   };
 
+  // Function to upload recordings to server
+  const uploadRecordings = async () => {
+    if (!currentSessionIdRef.current) {
+      console.warn("No session ID available for uploading recordings");
+      return;
+    }
+
+    try {
+      // Upload microphone recording
+      if (micAudioChunksRef.current.length > 0) {
+        const micBlob = new Blob(micAudioChunksRef.current, {
+          type: "audio/webm",
+        });
+        const micFormData = new FormData();
+        micFormData.append("audio", micBlob, "microphone_recording.webm");
+        micFormData.append("sessionId", currentSessionIdRef.current);
+        micFormData.append("type", "input");
+
+        fetch(
+          `${
+            process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000"
+          }/api/upload-recording`,
+          {
+            method: "POST",
+            body: micFormData,
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Microphone recording uploaded:", data.url);
+            setInputAudioUrl(data.url);
+            toast.success("Sales recording saved successfully!");
+          })
+          .catch((error) => {
+            console.error("Error uploading microphone recording:", error);
+            toast.error("Failed to save sales recording");
+          });
+      }
+
+      // Upload system audio recording
+      if (systemAudioChunksRef.current.length > 0) {
+        const systemBlob = new Blob(systemAudioChunksRef.current, {
+          type: "audio/webm",
+        });
+        const systemFormData = new FormData();
+        systemFormData.append(
+          "audio",
+          systemBlob,
+          "system_audio_recording.webm"
+        );
+        systemFormData.append("sessionId", currentSessionIdRef.current);
+        systemFormData.append("type", "output");
+
+        fetch(
+          `${
+            process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000"
+          }/api/upload-recording`,
+          {
+            method: "POST",
+            body: systemFormData,
+          }
+        )
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("System audio recording uploaded:", data.url);
+            setOutputAudioUrl(data.url);
+            toast.success("Client recording saved successfully!");
+          })
+          .catch((error) => {
+            console.error("Error uploading system audio recording:", error);
+            toast.error("Failed to save client recording");
+          });
+      }
+    } catch (error) {
+      console.error("Error uploading recordings:", error);
+    }
+  };
+
   const stopRecording = () => {
+    // Upload recordings before stopping
+    uploadRecordings();
+
     // Stop microphone recording
     if (
       micMediaRecorderRef.current &&
@@ -401,6 +532,11 @@ export function UnifiedTranscriptionRecorder() {
       systemSocketRef.current.emit("stop-transcription");
     }
 
+    // Clear audio chunks
+    micAudioChunksRef.current = [];
+    systemAudioChunksRef.current = [];
+    currentSessionIdRef.current = null;
+
     setIsRecording(false);
     setCurrentStep("idle");
   };
@@ -412,6 +548,8 @@ export function UnifiedTranscriptionRecorder() {
     setFinalOutputTranscripts([]);
     setCurrentInputInterim("");
     setCurrentOutputInterim("");
+    setInputAudioUrl(null);
+    setOutputAudioUrl(null);
   };
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -562,16 +700,25 @@ export function UnifiedTranscriptionRecorder() {
                   <Mic className='h-5 w-5 text-blue-500' />
                   Sales Transcription
                 </h3>
-                {inputTranscript && (
-                  <Button
-                    onClick={() => copyToClipboard(inputTranscript, "Sales")}
-                    variant='outline'
-                    size='sm'
-                  >
-                    <Copy className='h-4 w-4 mr-2' />
-                    Copy
-                  </Button>
-                )}
+                <div className='flex items-center gap-2'>
+                  {inputAudioUrl && (
+                    <audio controls className='h-8' preload='none'>
+                      <source src={inputAudioUrl} type='audio/webm' />
+                      <source src={inputAudioUrl} type='audio/wav' />
+                      Your browser does not support the audio element.
+                    </audio>
+                  )}
+                  {inputTranscript && (
+                    <Button
+                      onClick={() => copyToClipboard(inputTranscript, "Sales")}
+                      variant='outline'
+                      size='sm'
+                    >
+                      <Copy className='h-4 w-4 mr-2' />
+                      Copy
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {inputTranscript ? (
@@ -610,16 +757,27 @@ export function UnifiedTranscriptionRecorder() {
                   <Monitor className='h-5 w-5 text-orange-500' />
                   Client Transcription
                 </h3>
-                {outputTranscript && (
-                  <Button
-                    onClick={() => copyToClipboard(outputTranscript, "Client")}
-                    variant='outline'
-                    size='sm'
-                  >
-                    <Copy className='h-4 w-4 mr-2' />
-                    Copy
-                  </Button>
-                )}
+                <div className='flex items-center gap-2'>
+                  {outputAudioUrl && (
+                    <audio controls className='h-8' preload='none'>
+                      <source src={outputAudioUrl} type='audio/webm' />
+                      <source src={outputAudioUrl} type='audio/wav' />
+                      Your browser does not support the audio element.
+                    </audio>
+                  )}
+                  {outputTranscript && (
+                    <Button
+                      onClick={() =>
+                        copyToClipboard(outputTranscript, "Client")
+                      }
+                      variant='outline'
+                      size='sm'
+                    >
+                      <Copy className='h-4 w-4 mr-2' />
+                      Copy
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {outputTranscript ? (

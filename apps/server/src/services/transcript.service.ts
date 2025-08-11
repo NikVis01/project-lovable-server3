@@ -281,6 +281,134 @@ export class TranscriptService {
       throw new Error("Failed to get recent sessions");
     }
   }
+
+  /**
+   * Get sessions with recordings (that have audio URLs)
+   */
+  async getSessionsWithRecordings(limit: number = 50, offset: number = 0) {
+    try {
+      const sessions = await prisma.transcriptSession.findMany({
+        where: {
+          OR: [
+            { audioInputUrl: { not: null } },
+            { audioOutputUrl: { not: null } },
+          ],
+        },
+        orderBy: { startedAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+
+      return sessions;
+    } catch (error) {
+      console.error("Error getting sessions with recordings:", error);
+      throw new Error("Failed to get sessions with recordings");
+    }
+  }
+
+  /**
+   * Get all sessions (with pagination)
+   */
+  async getAllSessions(limit: number = 50, offset: number = 0) {
+    try {
+      const sessions = await prisma.transcriptSession.findMany({
+        orderBy: { startedAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+
+      return sessions;
+    } catch (error) {
+      console.error("Error getting all sessions:", error);
+      throw new Error("Failed to get all sessions");
+    }
+  }
+
+  /**
+   * Delete a session by ID
+   */
+  async deleteSession(sessionId: string) {
+    try {
+      const session = await prisma.transcriptSession.delete({
+        where: { id: sessionId },
+      });
+
+      console.log(`Deleted session: ${session.id}`);
+      return session;
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      throw new Error("Failed to delete session");
+    }
+  }
+
+  /**
+   * Update audio input URL for a session
+   */
+  async updateAudioInputUrl(socketId: string, audioUrl: string) {
+    try {
+      const session = await prisma.transcriptSession.update({
+        where: { socketId },
+        data: { audioInputUrl: audioUrl },
+      });
+
+      console.log(
+        `Updated audio input URL for session ${session.id}: ${audioUrl}`
+      );
+      return session;
+    } catch (error) {
+      console.error("Error updating audio input URL:", error);
+      throw new Error("Failed to update audio input URL");
+    }
+  }
+
+  /**
+   * Update audio output URL for a session
+   */
+  async updateAudioOutputUrl(socketId: string, audioUrl: string) {
+    try {
+      const session = await prisma.transcriptSession.update({
+        where: { socketId },
+        data: { audioOutputUrl: audioUrl },
+      });
+
+      console.log(
+        `Updated audio output URL for session ${session.id}: ${audioUrl}`
+      );
+      return session;
+    } catch (error) {
+      console.error("Error updating audio output URL:", error);
+      throw new Error("Failed to update audio output URL");
+    }
+  }
+
+  /**
+   * Update both audio URLs for a session
+   */
+  async updateAudioUrls(
+    socketId: string,
+    inputUrl?: string,
+    outputUrl?: string
+  ) {
+    try {
+      const updateData: any = {};
+      if (inputUrl) updateData.audioInputUrl = inputUrl;
+      if (outputUrl) updateData.audioOutputUrl = outputUrl;
+
+      const session = await prisma.transcriptSession.update({
+        where: { socketId },
+        data: updateData,
+      });
+
+      console.log(`Updated audio URLs for session ${session.id}`, {
+        inputUrl,
+        outputUrl,
+      });
+      return session;
+    } catch (error) {
+      console.error("Error updating audio URLs:", error);
+      throw new Error("Failed to update audio URLs");
+    }
+  }
 }
 
 export const transcriptService = new TranscriptService();

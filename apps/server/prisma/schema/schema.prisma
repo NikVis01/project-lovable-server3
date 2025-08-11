@@ -15,6 +15,8 @@ model TranscriptSession {
   languageCode     String   @default("en-US")
   transcriptInput  String?  // Speech input from microphone  
   transcriptOutput String?  // Text output being spoken/displayed to user
+  audioInputUrl    String?  // URL to sales/microphone recording in GCS
+  audioOutputUrl   String?  // URL to client/system audio recording in GCS
   status           SessionStatus @default(ACTIVE)
   startedAt        DateTime @default(now())
   endedAt          DateTime?

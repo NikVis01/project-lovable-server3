@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { SpeechService } from "./services/speech.service.js";
 import { transcriptService } from "./services/transcript.service.js";
+import { appRouter } from "./routers/index.js";
 
 const app = express();
 const server = createServer(app);
@@ -25,6 +26,12 @@ app.use(
 );
 
 app.use(express.json());
+
+// Serve static files from uploads directory
+app.use("/uploads", express.static("uploads"));
+
+// Mount API routes
+app.use(appRouter);
 
 app.get("/", (_req, res) => {
   res.status(200).send("OK");
