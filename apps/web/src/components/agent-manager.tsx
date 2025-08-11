@@ -6,6 +6,7 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Slider } from "./ui/slider";
 import {
   Bot,
   Plus,
@@ -80,6 +81,9 @@ export function AgentManager() {
       language: "en",
     },
   });
+
+  // Talk speed (TTS) control: 0.7 - 1.2 per ElevenLabs docs
+  const [talkSpeed, setTalkSpeed] = useState<number>(1.0);
 
   // Sales client personality selection (Dove/Peacock/Owl/Eagle)
   const [clientPersonality, setClientPersonality] = useState<
@@ -251,6 +255,11 @@ export function AgentManager() {
       const payload = {
         ...newAgent,
         system_prompt: `${newAgent.system_prompt}${personaSnippet}`.trim(),
+        conversation_config: {
+          ...newAgent.conversation_config,
+          // Pass TTS speed to server → ElevenLabs
+          tts: { speed: talkSpeed },
+        },
       };
 
       const response = await fetch(`${serverUrl}/api/elevenlabs/agents`, {
@@ -464,6 +473,30 @@ export function AgentManager() {
                       {personalityLabels[clientPersonality]}
                     </p>
                   )}
+                </div>
+
+                {/* Talk Speed */}
+                <div className='space-y-2'>
+                  <Label htmlFor='talk-speed'>
+                    Talk Speed: {talkSpeed.toFixed(2)}x
+                  </Label>
+                  <div className='px-2'>
+                    <Slider
+                      id='talk-speed'
+                      min={0.7}
+                      max={1.2}
+                      step={0.05 as any}
+                      value={[talkSpeed] as any}
+                      onValueChange={(vals: number[] | any) => {
+                        const v = Array.isArray(vals) ? vals[0] : vals;
+                        if (typeof v === "number")
+                          setTalkSpeed(Math.min(1.2, Math.max(0.7, v)));
+                      }}
+                    />
+                  </div>
+                  <p className='text-xs text-gray-600'>
+                    Range 0.70x – 1.20x. Lower is slower, higher is faster.
+                  </p>
                 </div>
               </div>
 
