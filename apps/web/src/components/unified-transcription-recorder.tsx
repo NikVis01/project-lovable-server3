@@ -42,6 +42,10 @@ export function UnifiedTranscriptionRecorder() {
   const [outputAudioUrl, setOutputAudioUrl] = useState<string | null>(null);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
 
+  // Tab switching state
+  const [activeTab, setActiveTab] = useState<"input" | "output">("input");
+  const tabSwitchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Browser support
   const [microphoneSupported, setMicrophoneSupported] = useState(true);
   const [systemAudioSupported, setSystemAudioSupported] = useState(true);
@@ -61,6 +65,22 @@ export function UnifiedTranscriptionRecorder() {
 
   // Session tracking
   const currentSessionIdRef = useRef<string | null>(null);
+
+  // Helper function to switch tabs with debouncing
+  const switchTabWithDelay = (newTab: "input" | "output") => {
+    // Only switch if we're currently on a different tab
+    if (activeTab !== newTab) {
+      // Clear any existing timeout
+      if (tabSwitchTimeoutRef.current) {
+        clearTimeout(tabSwitchTimeoutRef.current);
+      }
+
+      // Set a new timeout to switch tabs
+      tabSwitchTimeoutRef.current = setTimeout(() => {
+        setActiveTab(newTab);
+      }, 300); // 300ms delay to avoid rapid switching
+    }
+  };
 
   // Load session audio URLs
   const loadSessionAudio = async (sessionId: string) => {
@@ -163,6 +183,11 @@ export function UnifiedTranscriptionRecorder() {
     micSocket.on("transcription-result", (data: TranscriptionResult) => {
       console.log("Microphone transcription result:", data);
 
+      // Auto-switch to input tab when microphone transcription comes in
+      if (data.transcript && data.transcript.trim()) {
+        switchTabWithDelay("input");
+      }
+
       if (data.isFinal) {
         setFinalInputTranscripts((prev) => [...prev, data.transcript]);
         setCurrentInputInterim("");
@@ -185,6 +210,11 @@ export function UnifiedTranscriptionRecorder() {
     systemSocket.on("transcription-result", (data: TranscriptionResult) => {
       console.log("System audio transcription result:", data);
 
+      // Auto-switch to output tab when system audio transcription comes in
+      if (data.transcript && data.transcript.trim()) {
+        switchTabWithDelay("output");
+      }
+
       if (data.isFinal) {
         setFinalOutputTranscripts((prev) => [...prev, data.transcript]);
         setCurrentOutputInterim("");
@@ -202,6 +232,11 @@ export function UnifiedTranscriptionRecorder() {
     return () => {
       micSocket.disconnect();
       systemSocket.disconnect();
+
+      // Clear any pending tab switch timeout
+      if (tabSwitchTimeoutRef.current) {
+        clearTimeout(tabSwitchTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -539,6 +574,9 @@ export function UnifiedTranscriptionRecorder() {
 
     setIsRecording(false);
     setCurrentStep("idle");
+
+    // Reset to input tab when recording stops
+    setActiveTab("input");
   };
 
   const clearTranscripts = () => {
@@ -550,6 +588,9 @@ export function UnifiedTranscriptionRecorder() {
     setCurrentOutputInterim("");
     setInputAudioUrl(null);
     setOutputAudioUrl(null);
+
+    // Reset to input tab when clearing
+    setActiveTab("input");
   };
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -670,20 +711,48 @@ export function UnifiedTranscriptionRecorder() {
       </Card>
 
       {/* Transcription Tabs */}
-      <Tabs defaultValue='input' className='w-full'>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as "input" | "output")}
+        className='w-full'
+      >
         <TabsList className='grid w-full grid-cols-2'>
-          <TabsTrigger value='input' className='flex items-center gap-2'>
-            <Mic className='h-4 w-4' />
+          <TabsTrigger
+            value='input'
+            className='flex items-center gap-2 relative'
+          >
+            <Mic
+              className={`h-4 w-4 ${
+                currentInputInterim && isRecording
+                  ? "text-blue-500 animate-pulse"
+                  : ""
+              }`}
+            />
             Sales
+            {currentInputInterim && isRecording && (
+              <div className='absolute -top-1 -right-1 h-2 w-2 bg-blue-500 rounded-full animate-ping'></div>
+            )}
             {finalInputTranscripts.length > 0 && (
               <span className='ml-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full'>
                 {finalInputTranscripts.length}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value='output' className='flex items-center gap-2'>
-            <Monitor className='h-4 w-4' />
+          <TabsTrigger
+            value='output'
+            className='flex items-center gap-2 relative'
+          >
+            <Monitor
+              className={`h-4 w-4 ${
+                currentOutputInterim && isRecording
+                  ? "text-orange-500 animate-pulse"
+                  : ""
+              }`}
+            />
             Client
+            {currentOutputInterim && isRecording && (
+              <div className='absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full animate-ping'></div>
+            )}
             {finalOutputTranscripts.length > 0 && (
               <span className='ml-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full'>
                 {finalOutputTranscripts.length}
