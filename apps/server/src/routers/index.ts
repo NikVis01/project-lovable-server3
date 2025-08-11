@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { audioRouter } from "./audio.router.js";
 import { sessionsRouter } from "./sessions.router.js";
+import { elevenlabsRouter } from "./elevenlabs.router.js";
 
 export const appRouter: Router = Router();
 
@@ -9,5 +10,8 @@ appRouter.use("/api", audioRouter);
 
 // Mount sessions routes
 appRouter.use("/api/sessions", sessionsRouter);
+
+// Mount ElevenLabs routes
+appRouter.use("/api/elevenlabs", elevenlabsRouter);
 
 export type AppRouter = typeof appRouter;
