@@ -33,23 +33,23 @@ export function SystemAudioRecorder() {
   // Check browser compatibility on mount
   useEffect(() => {
     const checkBrowserSupport = () => {
-      const isSupported = 
-        navigator.mediaDevices && 
-        navigator.mediaDevices.getDisplayMedia && 
+      const isSupported =
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getDisplayMedia &&
         window.isSecureContext;
-      
+
       setBrowserSupported(isSupported);
-      
+
       if (!isSupported) {
         console.warn("System audio capture not supported:", {
           mediaDevices: !!navigator.mediaDevices,
           getDisplayMedia: !!navigator.mediaDevices?.getDisplayMedia,
           secureContext: window.isSecureContext,
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
         });
       }
     };
-    
+
     checkBrowserSupport();
   }, []);
 
@@ -143,16 +143,20 @@ export function SystemAudioRecorder() {
     try {
       // Check if getDisplayMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        throw new Error("Screen capture (getDisplayMedia) is not supported in this browser. Please use Chrome, Edge, or Firefox.");
+        throw new Error(
+          "Screen capture (getDisplayMedia) is not supported in this browser. Please use Chrome, Edge, or Firefox."
+        );
       }
 
       // Check if we're in a secure context (HTTPS or localhost)
       if (!window.isSecureContext) {
-        throw new Error("Screen capture requires a secure context (HTTPS or localhost).");
+        throw new Error(
+          "Screen capture requires a secure context (HTTPS or localhost)."
+        );
       }
 
       console.log("Requesting system audio capture...");
-      
+
       // Request screen sharing with audio (system audio capture)
       // Note: We need to request video as well in many browsers, then ignore it
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
@@ -227,11 +231,12 @@ export function SystemAudioRecorder() {
       mediaRecorderRef.current.start(250); // Send data every 250ms
       setIsRecording(true);
 
-      // Start transcription on server (this will recognize system audio as input)
+      // Start transcription on server (this will recognize system audio as output)
       if (socketRef.current && isConnected) {
         socketRef.current.emit("start-transcription", {
           languageCode: "en-US",
           sampleRateHertz: 16000,
+          sourceType: "output", // Specify this is system audio output
         });
       }
 
@@ -249,107 +254,110 @@ export function SystemAudioRecorder() {
           stopRecording();
         });
       });
-          } catch (error) {
-        console.error("Error starting system audio recording:", error);
-        
-        // Try alternative approach with different constraints
-        if (error instanceof Error && error.name === "NotSupportedError") {
-          try {
-            console.log("Trying alternative approach - tab audio capture...");
-            
-            // Alternative: Request with minimal video and focus on audio
-            const alternativeStream = await navigator.mediaDevices.getDisplayMedia({
+    } catch (error) {
+      console.error("Error starting system audio recording:", error);
+
+      // Try alternative approach with different constraints
+      if (error instanceof Error && error.name === "NotSupportedError") {
+        try {
+          console.log("Trying alternative approach - tab audio capture...");
+
+          // Alternative: Request with minimal video and focus on audio
+          const alternativeStream =
+            await navigator.mediaDevices.getDisplayMedia({
               video: true, // Some browsers require video to be true
               audio: true, // Simplified audio request
             });
 
-            displayStreamRef.current = alternativeStream;
+          displayStreamRef.current = alternativeStream;
 
-            // Extract audio tracks
-            const audioTracks = alternativeStream.getAudioTracks();
+          // Extract audio tracks
+          const audioTracks = alternativeStream.getAudioTracks();
 
-            if (audioTracks.length === 0) {
-              throw new Error(
-                "No audio tracks found. Your browser may not support system audio capture, or you need to select 'Share tab audio' in the dialog."
-              );
-            }
-
-            // Create audio-only stream
-            const audioStream = new MediaStream(audioTracks);
-            streamRef.current = audioStream;
-
-            // Continue with the same MediaRecorder setup...
-            const options: MediaRecorderOptions = {
-              mimeType: "audio/webm;codecs=opus",
-            };
-
-            if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
-              options.mimeType = "audio/webm";
-              if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
-                options.mimeType = "audio/wav";
-              }
-            }
-
-            mediaRecorderRef.current = new MediaRecorder(audioStream, options);
-            
-            // Same event handlers as before...
-            mediaRecorderRef.current.ondataavailable = (event) => {
-              if (event.data.size > 0) {
-                audioChunksRef.current.push(event.data);
-
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  const base64Audio = reader.result as string;
-                  const base64Data = base64Audio.split(",")[1];
-
-                  if (socketRef.current && isConnected) {
-                    socketRef.current.emit("audio-data", base64Data);
-                  }
-                };
-                reader.readAsDataURL(event.data);
-              }
-            };
-
-            mediaRecorderRef.current.onstop = () => {
-              audioChunksRef.current = [];
-            };
-
-            mediaRecorderRef.current.start(250);
-            setIsRecording(true);
-
-            if (socketRef.current && isConnected) {
-              socketRef.current.emit("start-transcription", {
-                languageCode: "en-US",
-                sampleRateHertz: 16000,
-              });
-            }
-
-            // Monitor for stream ending
-            alternativeStream.getAudioTracks().forEach((track) => {
-              track.addEventListener("ended", () => {
-                console.log("Audio share ended by user");
-                stopRecording();
-              });
-            });
-
-            toast.success("Started tab audio capture (alternative mode)");
-            
-          } catch (alternativeError) {
-            console.error("Alternative approach also failed:", alternativeError);
-            toast.error(
-              `System audio capture not supported: ${
-                alternativeError instanceof Error ? alternativeError.message : "Unknown error"
-              }`
+          if (audioTracks.length === 0) {
+            throw new Error(
+              "No audio tracks found. Your browser may not support system audio capture, or you need to select 'Share tab audio' in the dialog."
             );
           }
-        } else {
+
+          // Create audio-only stream
+          const audioStream = new MediaStream(audioTracks);
+          streamRef.current = audioStream;
+
+          // Continue with the same MediaRecorder setup...
+          const options: MediaRecorderOptions = {
+            mimeType: "audio/webm;codecs=opus",
+          };
+
+          if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+            options.mimeType = "audio/webm";
+            if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+              options.mimeType = "audio/wav";
+            }
+          }
+
+          mediaRecorderRef.current = new MediaRecorder(audioStream, options);
+
+          // Same event handlers as before...
+          mediaRecorderRef.current.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunksRef.current.push(event.data);
+
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const base64Audio = reader.result as string;
+                const base64Data = base64Audio.split(",")[1];
+
+                if (socketRef.current && isConnected) {
+                  socketRef.current.emit("audio-data", base64Data);
+                }
+              };
+              reader.readAsDataURL(event.data);
+            }
+          };
+
+          mediaRecorderRef.current.onstop = () => {
+            audioChunksRef.current = [];
+          };
+
+          mediaRecorderRef.current.start(250);
+          setIsRecording(true);
+
+          if (socketRef.current && isConnected) {
+            socketRef.current.emit("start-transcription", {
+              languageCode: "en-US",
+              sampleRateHertz: 16000,
+              sourceType: "output", // Specify this is system audio output
+            });
+          }
+
+          // Monitor for stream ending
+          alternativeStream.getAudioTracks().forEach((track) => {
+            track.addEventListener("ended", () => {
+              console.log("Audio share ended by user");
+              stopRecording();
+            });
+          });
+
+          toast.success("Started tab audio capture (alternative mode)");
+        } catch (alternativeError) {
+          console.error("Alternative approach also failed:", alternativeError);
           toast.error(
-            `Failed to start system audio recording: ${
-              error instanceof Error ? error.message : "Unknown error"
+            `System audio capture not supported: ${
+              alternativeError instanceof Error
+                ? alternativeError.message
+                : "Unknown error"
             }`
           );
         }
+      } else {
+        toast.error(
+          `Failed to start system audio recording: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
       }
+    }
   };
 
   const stopRecording = () => {
@@ -454,19 +462,31 @@ export function SystemAudioRecorder() {
       {/* Browser Compatibility Warning */}
       {!browserSupported && (
         <Card className='p-4 bg-yellow-50 border-yellow-200'>
-          <h4 className='font-medium mb-2 text-yellow-800'>⚠️ Browser Not Supported</h4>
+          <h4 className='font-medium mb-2 text-yellow-800'>
+            ⚠️ Browser Not Supported
+          </h4>
           <div className='text-sm text-yellow-700 space-y-2'>
-            <p>System audio capture is not supported in your current browser or environment.</p>
-            <p><strong>Requirements:</strong></p>
+            <p>
+              System audio capture is not supported in your current browser or
+              environment.
+            </p>
+            <p>
+              <strong>Requirements:</strong>
+            </p>
             <ul className='ml-4 space-y-1'>
               <li>• Chrome 70+, Edge 79+, or Firefox 92+</li>
               <li>• HTTPS connection (or localhost for development)</li>
               <li>• Recent browser version with getDisplayMedia support</li>
             </ul>
-            <p><strong>Current status:</strong></p>
+            <p>
+              <strong>Current status:</strong>
+            </p>
             <ul className='ml-4 space-y-1 font-mono text-xs'>
               <li>• Media Devices: {navigator.mediaDevices ? "✅" : "❌"}</li>
-              <li>• getDisplayMedia: {navigator.mediaDevices?.getDisplayMedia ? "✅" : "❌"}</li>
+              <li>
+                • getDisplayMedia:{" "}
+                {navigator.mediaDevices?.getDisplayMedia ? "✅" : "❌"}
+              </li>
               <li>• Secure Context: {window.isSecureContext ? "✅" : "❌"}</li>
             </ul>
           </div>
@@ -515,32 +535,40 @@ export function SystemAudioRecorder() {
         <h4 className='font-medium mb-2 text-orange-800'>
           System Audio Capture Instructions:
         </h4>
-                  <ul className='text-sm text-orange-700 space-y-1'>
-            <li>
-              • Click "Capture System Audio" to start recording system audio output
-            </li>
-            <li>
-              • <strong>Chrome/Edge:</strong> In the screen share dialog, select "Share tab audio" or "Share system audio"
-            </li>
-            <li>
-              • <strong>Firefox:</strong> Make sure to enable "Share audio" in the screen share dialog
-            </li>
-            <li>
-              • This will transcribe any audio playing in your browser or on your computer
-            </li>
-            <li>
-              • Works best with browser tab audio (YouTube, Netflix, podcasts, etc.)
-            </li>
-            <li>
-              • The transcribed text is automatically sent as "output transcript" to the database
-            </li>
-            <li>
-              • Both input (microphone) and output (system audio) are stored separately
-            </li>
-            <li>
-              • <strong>Note:</strong> System audio capture support varies by browser and OS
-            </li>
-          </ul>
+        <ul className='text-sm text-orange-700 space-y-1'>
+          <li>
+            • Click "Capture System Audio" to start recording system audio
+            output
+          </li>
+          <li>
+            • <strong>Chrome/Edge:</strong> In the screen share dialog, select
+            "Share tab audio" or "Share system audio"
+          </li>
+          <li>
+            • <strong>Firefox:</strong> Make sure to enable "Share audio" in the
+            screen share dialog
+          </li>
+          <li>
+            • This will transcribe any audio playing in your browser or on your
+            computer
+          </li>
+          <li>
+            • Works best with browser tab audio (YouTube, Netflix, podcasts,
+            etc.)
+          </li>
+          <li>
+            • The transcribed text is automatically sent as "output transcript"
+            to the database
+          </li>
+          <li>
+            • Both input (microphone) and output (system audio) are stored
+            separately
+          </li>
+          <li>
+            • <strong>Note:</strong> System audio capture support varies by
+            browser and OS
+          </li>
+        </ul>
       </Card>
     </div>
   );

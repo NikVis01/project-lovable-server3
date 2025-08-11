@@ -167,6 +167,7 @@ export function SpeechTranscription() {
         socketRef.current.emit("start-transcription", {
           languageCode: "en-US",
           sampleRateHertz: 16000,
+          sourceType: "input", // Specify this is microphone input
         });
       }
     } catch (error) {

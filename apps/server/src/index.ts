@@ -87,7 +87,7 @@ io.on("connection", (socket) => {
 
   // Handle starting speech recognition
   socket.on("start-transcription", async (options = {}) => {
-    console.log(`Starting transcription for client ${socket.id}`);
+    console.log(`Starting transcription for client ${socket.id}`, options);
 
     try {
       // Reset accumulated transcript for new session
@@ -109,6 +109,10 @@ io.on("connection", (socket) => {
             sessionId: dbSession.id,
           });
 
+          // Determine if this is system audio output or microphone input
+          const sourceType = options.sourceType || "input"; // Default to input for backward compatibility
+          const isSystemAudio = sourceType === "output";
+
           // Update full transcript and store in database
           if (isFinal) {
             // Add final transcript to accumulated transcript
@@ -116,13 +120,20 @@ io.on("connection", (socket) => {
               (accumulatedTranscript ? "\n\n" : "") + transcript.trim();
 
             try {
-              await transcriptService.updateLiveTranscriptInput(
-                socket.id,
-                accumulatedTranscript
-              );
+              if (isSystemAudio) {
+                await transcriptService.updateLiveTranscriptOutput(
+                  socket.id,
+                  accumulatedTranscript
+                );
+              } else {
+                await transcriptService.updateLiveTranscriptInput(
+                  socket.id,
+                  accumulatedTranscript
+                );
+              }
             } catch (dbError) {
               console.error(
-                "Failed to store final transcript in database:",
+                `Failed to store final transcript in database (${sourceType}):`,
                 dbError
               );
             }
@@ -134,13 +145,20 @@ io.on("connection", (socket) => {
               transcript.trim();
 
             try {
-              await transcriptService.updateLiveTranscriptInput(
-                socket.id,
-                currentFullTranscript
-              );
+              if (isSystemAudio) {
+                await transcriptService.updateLiveTranscriptOutput(
+                  socket.id,
+                  currentFullTranscript
+                );
+              } else {
+                await transcriptService.updateLiveTranscriptInput(
+                  socket.id,
+                  currentFullTranscript
+                );
+              }
             } catch (dbError) {
               console.error(
-                "Failed to store interim transcript in database:",
+                `Failed to store interim transcript in database (${sourceType}):`,
                 dbError
               );
             }
