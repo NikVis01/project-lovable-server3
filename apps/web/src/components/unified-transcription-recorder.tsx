@@ -446,11 +446,11 @@ export function UnifiedTranscriptionRecorder() {
         <div className='space-y-4'>
           <div className='text-center'>
             <h2 className='text-2xl font-bold mb-2'>
-              Unified Transcription Recorder
+              Sales Call Transcription
             </h2>
             <p className='text-muted-foreground'>
-              Record both microphone input and system audio output
-              simultaneously
+              Record both sales representative (microphone) and client (system
+              audio) simultaneously
             </p>
           </div>
 
@@ -504,7 +504,7 @@ export function UnifiedTranscriptionRecorder() {
                   microphoneSupported ? "text-green-600" : "text-red-600"
                 }
               >
-                Microphone: {microphoneSupported ? "✅" : "❌"}
+                Sales Rep: {microphoneSupported ? "✅" : "❌"}
               </span>
             </div>
             <div className='flex items-center gap-2'>
@@ -514,7 +514,7 @@ export function UnifiedTranscriptionRecorder() {
                   systemAudioSupported ? "text-green-600" : "text-red-600"
                 }
               >
-                System Audio: {systemAudioSupported ? "✅" : "❌"}
+                Client Audio: {systemAudioSupported ? "✅" : "❌"}
               </span>
             </div>
           </div>
@@ -536,7 +536,7 @@ export function UnifiedTranscriptionRecorder() {
         <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger value='input' className='flex items-center gap-2'>
             <Mic className='h-4 w-4' />
-            Microphone Input
+            Sales
             {finalInputTranscripts.length > 0 && (
               <span className='ml-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full'>
                 {finalInputTranscripts.length}
@@ -545,7 +545,7 @@ export function UnifiedTranscriptionRecorder() {
           </TabsTrigger>
           <TabsTrigger value='output' className='flex items-center gap-2'>
             <Monitor className='h-4 w-4' />
-            System Audio Output
+            Client
             {finalOutputTranscripts.length > 0 && (
               <span className='ml-2 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full'>
                 {finalOutputTranscripts.length}
@@ -560,11 +560,11 @@ export function UnifiedTranscriptionRecorder() {
               <div className='flex items-center justify-between'>
                 <h3 className='text-lg font-semibold flex items-center gap-2'>
                   <Mic className='h-5 w-5 text-blue-500' />
-                  Microphone Input Transcription
+                  Sales Transcription
                 </h3>
                 {inputTranscript && (
                   <Button
-                    onClick={() => copyToClipboard(inputTranscript, "Input")}
+                    onClick={() => copyToClipboard(inputTranscript, "Sales")}
                     variant='outline'
                     size='sm'
                   >
@@ -594,7 +594,7 @@ export function UnifiedTranscriptionRecorder() {
               ) : (
                 <p className='text-gray-500 text-center py-12'>
                   {isConnected
-                    ? "Start recording to see microphone transcription here..."
+                    ? "Start recording to see sales transcription here..."
                     : "Connecting to transcription server..."}
                 </p>
               )}
@@ -608,11 +608,11 @@ export function UnifiedTranscriptionRecorder() {
               <div className='flex items-center justify-between'>
                 <h3 className='text-lg font-semibold flex items-center gap-2'>
                   <Monitor className='h-5 w-5 text-orange-500' />
-                  System Audio Output Transcription
+                  Client Transcription
                 </h3>
                 {outputTranscript && (
                   <Button
-                    onClick={() => copyToClipboard(outputTranscript, "Output")}
+                    onClick={() => copyToClipboard(outputTranscript, "Client")}
                     variant='outline'
                     size='sm'
                   >
@@ -642,7 +642,7 @@ export function UnifiedTranscriptionRecorder() {
               ) : (
                 <p className='text-gray-500 text-center py-12'>
                   {isConnected
-                    ? "Start recording to see system audio transcription here..."
+                    ? "Start recording to see client transcription here..."
                     : "Connecting to transcription server..."}
                 </p>
               )}
@@ -656,11 +656,11 @@ export function UnifiedTranscriptionRecorder() {
         <h4 className='font-medium mb-2 text-blue-800'>📝 How to Use:</h4>
         <ul className='text-sm text-blue-700 space-y-1'>
           <li>
-            • Click "Start Recording" to begin simultaneous microphone and
-            system audio capture
+            • Click "Start Recording" to begin simultaneous sales representative
+            and client audio capture
           </li>
           <li>
-            • You'll first be prompted to select a browser tab for system audio
+            • You'll first be prompted to select a browser tab for client audio
             capture
           </li>
           <li>
@@ -668,11 +668,11 @@ export function UnifiedTranscriptionRecorder() {
             the dialog
           </li>
           <li>
-            • Both your microphone input and system audio will be transcribed in
+            • Both sales representative and client audio will be transcribed in
             real-time
           </li>
           <li>
-            • Use the tabs above to switch between viewing input and output
+            • Use the tabs above to switch between viewing Sales and Client
             transcriptions
           </li>
           <li>• Both transcriptions are automatically saved to the database</li>
