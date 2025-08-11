@@ -8,3 +8,23 @@ datasource db {
   provider = "postgres"
   url      = env("DATABASE_URL")
 }
+
+model TranscriptSession {
+  id               String   @id @default(cuid())
+  socketId         String   @unique
+  languageCode     String   @default("en-US")
+  transcriptInput  String?  // Speech input from microphone  
+  transcriptOutput String?  // Text output being spoken/displayed to user
+  status           SessionStatus @default(ACTIVE)
+  startedAt        DateTime @default(now())
+  endedAt          DateTime?
+  updatedAt        DateTime @updatedAt
+  
+  @@map("transcript_sessions")
+}
+
+enum SessionStatus {
+  ACTIVE
+  ENDED
+  ERROR
+}
