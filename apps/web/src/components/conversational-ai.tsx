@@ -41,6 +41,12 @@ export function ConversationalAI() {
   const [volume, setVolume] = useState(0.8);
   const [isMuted, setIsMuted] = useState(false);
 
+  // Agents list
+  type ListedAgent = { id: string; name?: string };
+  const [agents, setAgents] = useState<ListedAgent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+  const [agentsError, setAgentsError] = useState<string | null>(null);
+
   // Conversation state
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<
@@ -67,27 +73,42 @@ export function ConversationalAI() {
       setCurrentConversationId(null);
     },
     onMessage: (message) => {
-      console.log("Received message:", message);
+      // Be permissive with payload shape from SDK
+      const m: any = message as any;
+      const text: string = typeof m === "string" ? m : m?.message ?? "";
+      const isFinal: boolean = !!m?.is_final;
+      const mType: string | undefined = m?.type;
+      const source: string | undefined = m?.source;
 
-      // Handle different message types
-      if (message.type === "user_transcript") {
-        addMessage(message.message, "user", !message.is_final);
-      } else if (message.type === "agent_response") {
-        addMessage(message.message, "agent", !message.is_final);
-      } else if (message.type === "debug") {
-        console.log("Debug message:", message.message);
+      if (mType === "debug") {
+        console.log("Debug message:", text);
+        return;
       }
+
+      if (mType === "user_transcript" || source === "user") {
+        addMessage(text, "user", !isFinal);
+        return;
+      }
+
+      if (mType === "agent_response" || source === "agent") {
+        addMessage(text, "agent", !isFinal);
+        return;
+      }
+
+      // Fallback
+      if (text) addMessage(text, "system");
     },
     onError: (error) => {
+      const msg = (error as any)?.message ?? String(error);
       console.error("Conversation error:", error);
-      setError(error.message || "An error occurred");
-      addMessage(`Error: ${error.message || "Unknown error"}`, "system");
-      toast.error(`Conversation error: ${error.message || "Unknown error"}`);
+      setError(msg || "An error occurred");
+      addMessage(`Error: ${msg || "Unknown error"}`, "system");
+      toast.error(`Conversation error: ${msg || "Unknown error"}`);
 
       // Auto-retry connection after a delay if it's a connection error
       if (
-        error.message?.includes("connection") ||
-        error.message?.includes("network")
+        typeof msg === "string" &&
+        (msg.includes("connection") || msg.includes("network"))
       ) {
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
@@ -144,6 +165,14 @@ export function ConversationalAI() {
 
   // Request microphone permission on component mount
   useEffect(() => {
+    // Set a default user id until auth is implemented
+    const defaultUser =
+      process.env.NEXT_PUBLIC_DEFAULT_USER_ID || "demo-user-001";
+    setUserId(defaultUser);
+
+    // Load agents
+    void refreshAgents();
+
     const requestMicrophonePermission = async () => {
       try {
         await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -157,6 +186,38 @@ export function ConversationalAI() {
 
     requestMicrophonePermission();
   }, []);
+
+  const refreshAgents = async () => {
+    try {
+      setLoadingAgents(true);
+      setAgentsError(null);
+      const serverUrl =
+        process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+      const resp = await fetch(`${serverUrl}/api/elevenlabs/agents`);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to load agents");
+      }
+      const data = await resp.json();
+      const list: ListedAgent[] = (data.agents || [])
+        .map((a: any) => ({
+          id: a.agent_id || a.agentId || a.id,
+          name: a.name || a.agent_name || undefined,
+        }))
+        .filter((a: ListedAgent) => !!a.id);
+      setAgents(list);
+      // If no agent selected yet, preselect the first
+      if (!agentId && list.length > 0) {
+        setAgentId(list[0].id);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to load agents";
+      setAgentsError(msg);
+      toast.error(msg);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
 
   // Cleanup on unmount
   useEffect(() => {
@@ -309,25 +370,41 @@ export function ConversationalAI() {
           {/* Configuration Form */}
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div className='space-y-2'>
-              <Label htmlFor='agentId'>Agent ID *</Label>
-              <Input
-                id='agentId'
-                placeholder='Enter ElevenLabs Agent ID'
-                value={agentId}
-                onChange={(e) => setAgentId(e.target.value)}
-                disabled={isConnected}
-              />
+              <Label htmlFor='agentSelect'>Agent *</Label>
+              <div className='flex gap-2'>
+                <select
+                  id='agentSelect'
+                  className='w-full p-2 border rounded-md'
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  disabled={isConnected || loadingAgents}
+                >
+                  {agents.length === 0 ? (
+                    <option value=''>No agents found</option>
+                  ) : (
+                    agents.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name ? `${a.name} — ${a.id.slice(0, 8)}…` : a.id}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <Button
+                  onClick={refreshAgents}
+                  variant='outline'
+                  disabled={loadingAgents || isConnected}
+                >
+                  {loadingAgents ? "Loading" : "Refresh"}
+                </Button>
+              </div>
+              {agentsError && (
+                <p className='text-xs text-red-600'>{agentsError}</p>
+              )}
             </div>
 
             <div className='space-y-2'>
-              <Label htmlFor='userId'>User ID (optional)</Label>
-              <Input
-                id='userId'
-                placeholder='Enter your user identifier'
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                disabled={isConnected}
-              />
+              <Label htmlFor='userId'>User ID</Label>
+              <Input id='userId' value={userId} disabled />
             </div>
 
             <div className='space-y-2'>
