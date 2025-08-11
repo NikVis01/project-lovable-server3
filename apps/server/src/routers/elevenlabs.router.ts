@@ -258,28 +258,50 @@ elevenlabsRouter.post("/agents", async (req: Request, res: Response) => {
       });
     }
 
+    // Build payload matching current REST schema, preserving incoming overrides
+    const incoming =
+      conversation_config && typeof conversation_config === "object"
+        ? conversation_config
+        : {};
+
     const agentData = {
+      name,
       conversation_config: {
-        agent_prompt: system_prompt,
-        first_message:
-          conversation_config?.first_message ||
-          "Hello! How can I help you today?",
-        language: conversation_config?.language || "en",
-        voice_id: voice_id,
-        tools: [],
-        ...conversation_config,
+        ...(incoming as Record<string, unknown>),
+        agent: {
+          ...(incoming as any).agent,
+          first_message:
+            (incoming as any)?.first_message ??
+            (incoming as any)?.agent?.first_message ??
+            "Hello! How can I help you today?",
+          language:
+            (incoming as any)?.language ??
+            (incoming as any)?.agent?.language ??
+            "en",
+          prompt: {
+            ...(incoming as any)?.agent?.prompt,
+            prompt: system_prompt,
+          },
+        },
+        tts: {
+          ...(incoming as any)?.tts,
+          voice_id,
+        },
       },
-      name: name,
     };
 
-    const response = await fetch("https://api.elevenlabs.io/v1/convai/agents", {
-      method: "POST",
-      headers: {
-        "xi-api-key": process.env.ELEVENLABS_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(agentData),
-    });
+    // Per ElevenLabs REST docs, agent creation uses /v1/convai/agents/create
+    const response = await fetch(
+      "https://api.elevenlabs.io/v1/convai/agents/create",
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": process.env.ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(agentData),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.text();
