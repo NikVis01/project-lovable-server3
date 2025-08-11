@@ -55,8 +55,8 @@ const config: runtime.GetPrismaClientConfig = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider     = \"prisma-client\"\n  output       = \"../generated\"\n  moduleFormat = \"esm\"\n}\n\ndatasource db {\n  provider = \"postgres\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel TranscriptSession {\n  id               String        @id @default(cuid())\n  socketId         String        @unique\n  languageCode     String        @default(\"en-US\")\n  transcriptInput  String? // Speech input from microphone  \n  transcriptOutput String? // Text output being spoken/displayed to user\n  status           SessionStatus @default(ACTIVE)\n  startedAt        DateTime      @default(now())\n  endedAt          DateTime?\n  updatedAt        DateTime      @updatedAt\n\n  @@map(\"transcript_sessions\")\n}\n\nenum SessionStatus {\n  ACTIVE\n  ENDED\n  ERROR\n}\n",
-  "inlineSchemaHash": "0513d44f9741b7d5a79b5458e6c389531a54aa19b052deb1408d8b23b1e1547d",
+  "inlineSchema": "generator client {\n  provider     = \"prisma-client\"\n  output       = \"../generated\"\n  moduleFormat = \"esm\"\n}\n\ndatasource db {\n  provider  = \"postgres\"\n  url       = env(\"DATABASE_URL\")\n  directUrl = env(\"DIRECT_URL\")\n}\n\nmodel TranscriptSession {\n  id               String        @id @default(cuid())\n  socketId         String        @unique\n  languageCode     String        @default(\"en-US\")\n  transcriptInput  String? // Speech input from microphone  \n  transcriptOutput String? // Text output being spoken/displayed to user\n  status           SessionStatus @default(ACTIVE)\n  startedAt        DateTime      @default(now())\n  endedAt          DateTime?\n  updatedAt        DateTime      @updatedAt\n\n  @@map(\"transcript_sessions\")\n}\n\nenum SessionStatus {\n  ACTIVE\n  ENDED\n  ERROR\n}\n",
+  "inlineSchemaHash": "5ad7b9957785e20b9a8975ab4cd5a6eb45623047f6a3ab5ccbbd38bfca866878",
   "copyEngine": true,
   "runtimeDataModel": {
     "models": {},
