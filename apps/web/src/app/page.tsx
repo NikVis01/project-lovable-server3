@@ -6,6 +6,7 @@ import { ConversationalAI } from "@/components/conversational-ai";
 import { AgentManager } from "@/components/agent-manager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, History, Phone, Bot } from "lucide-react";
+import { AgentFeed } from "@/components/agent-feed";
 
 const TITLE_TEXT = `
  ██████╗ ███████╗████████╗████████╗███████╗██████╗
@@ -74,6 +75,10 @@ export default function Home() {
           <SessionsHistory />
         </TabsContent>
       </Tabs>
+
+      <div className='mt-6'>
+        <AgentFeed />
+      </div>
     </div>
   );
 }

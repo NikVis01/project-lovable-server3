@@ -21,5 +21,8 @@
     "db:stop": "bun run --filter server db:stop",
     "db:down": "bun run --filter server db:down"
   },
-  "packageManager": "bun@1.2.19"
+  "packageManager": "bun@1.2.19",
+  "dependencies": {
+    "elevenlabs": "^1.59.0"
+  }
 }
