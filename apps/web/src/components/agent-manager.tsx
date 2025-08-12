@@ -755,7 +755,7 @@ export function AgentManager() {
                             <Label className='text-xs font-medium text-gray-600'>
                               Agent ID
                             </Label>
-                            <p className='font-mono text-xs break-all bg-gray-100 p-2 rounded'>
+                            <p className='font-mono text-xs break-all  p-2 rounded'>
                               {agent.agent_id}
                             </p>
                           </div>
@@ -801,7 +801,7 @@ export function AgentManager() {
                               )}
                             </Button>
                           </div>
-                          <div className='text-sm bg-gray-50 p-3 rounded'>
+                          <div className='text-sm  p-3 rounded'>
                             {showSystemPrompts[agent.agent_id] ? (
                               <p className='whitespace-pre-wrap'>
                                 {agent.system_prompt}

@@ -71,7 +71,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     height={32}
                   />
                 </div>
-                <span className='font-bold text-xl text-black'>Tone</span>
+                <span className='font-bold text-xl text-black dark:text-white'>
+                  Tone
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

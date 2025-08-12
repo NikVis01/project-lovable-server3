@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tune AI",
-  description: "Tune AI is a platform for AI-powered sales coaching",
+  title: "Tone AI",
+  description: "Tone AI is a platform for AI-powered sales coaching",
 };
 
 export default function RootLayout({
