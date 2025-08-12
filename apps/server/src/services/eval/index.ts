@@ -1,6 +1,7 @@
 import { transcriptService } from "../transcript.service.js";
 import { anthropic } from "../agent/runtime.js";
 import { SYSTEM_XML as EVAL_SYSTEM_XML } from "./system.xml.js";
+import prisma from "../../../prisma/index.js";
 
 function buildRoleLabeledTranscript(client: string, sales: string): string {
   return `Client:\n${client || ""}\n\nSales:\n${sales || ""}`.trim();
@@ -26,7 +27,11 @@ function extractFirstJsonObject(text: string): any {
       depth--;
       if (depth === 0) {
         const slice = cleaned.slice(start, i + 1);
-        try { return JSON.parse(slice); } catch { return {}; }
+        try {
+          return JSON.parse(slice);
+        } catch {
+          return {};
+        }
       }
     }
   }
@@ -69,9 +74,7 @@ export async function evaluateSession(sessionId: string) {
     max_tokens: 2000,
     temperature: 0,
     system: EVAL_SYSTEM_XML,
-    messages: [
-      { role: "user", content: transcriptText },
-    ],
+    messages: [{ role: "user", content: transcriptText }],
   } as any);
 
   const joined = (msg.content as Array<{ type: string; text?: string }>)
@@ -79,9 +82,42 @@ export async function evaluateSession(sessionId: string) {
     .join("")
     .trim();
 
+  let evalResult;
   try {
-    return JSON.parse(joined);
+    evalResult = JSON.parse(joined);
   } catch {
-    return extractFirstJsonObject(joined);
+    evalResult = extractFirstJsonObject(joined);
   }
-} 
+
+  // Save evaluation to database
+  try {
+    await prisma.evaluation.upsert({
+      where: { sessionId },
+      update: {
+        evalJson: evalResult,
+        updatedAt: new Date(),
+      },
+      create: {
+        sessionId,
+        evalJson: evalResult,
+      },
+    });
+  } catch (dbError) {
+    console.error("Failed to save evaluation to database:", dbError);
+    // Continue and return the result even if DB save fails
+  }
+
+  return evalResult;
+}
+
+export async function getEvaluationBySessionId(sessionId: string) {
+  try {
+    const evaluation = await prisma.evaluation.findUnique({
+      where: { sessionId },
+    });
+    return evaluation?.evalJson || null;
+  } catch (error) {
+    console.error("Failed to retrieve evaluation from database:", error);
+    return null;
+  }
+}

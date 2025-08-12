@@ -104,3 +104,13 @@ model Verification {
 
   @@map("verification")
 }
+
+model Evaluation {
+  id        String   @id @default(cuid())
+  sessionId String   @unique
+  evalJson  Json     // Complete evaluation JSON with all analysis results
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("evaluations")
+}

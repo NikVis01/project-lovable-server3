@@ -71,6 +71,11 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type Verification = Prisma.VerificationModel
+/**
+ * Model Evaluation
+ * 
+ */
+export type Evaluation = Prisma.EvaluationModel
 
 export type SessionStatus = $Enums.SessionStatus
 export const SessionStatus = $Enums.SessionStatus
