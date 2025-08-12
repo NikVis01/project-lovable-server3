@@ -7,6 +7,7 @@ import { AgentManager } from "@/components/agent-manager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mic, History, Phone, Bot } from "lucide-react";
 import { AgentFeed } from "@/components/agent-feed";
+import { CallEval } from "@/components/call-eval";
 
 const TITLE_TEXT = `
  ██████╗ ███████╗████████╗████████╗███████╗██████╗
@@ -72,6 +73,9 @@ export default function Home() {
         </TabsContent>
 
         <TabsContent value='history' className='mt-6'>
+          <div className='mb-4'>
+            <CallEval />
+          </div>
           <SessionsHistory />
         </TabsContent>
       </Tabs>
