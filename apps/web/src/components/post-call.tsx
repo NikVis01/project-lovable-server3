@@ -106,6 +106,3 @@ export function PostCall() {
     </div>
   );
 }
-
-export { PostCall };
-export default PostCall;
