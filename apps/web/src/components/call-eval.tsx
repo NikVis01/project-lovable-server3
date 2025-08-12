@@ -1,8 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { EvaluationDisplay } from "./evaluation-display";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { AlertCircle, Loader2 } from "lucide-react";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+const SERVER_URL =
+  process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
 
 type EvalResult = Record<string, unknown>;
 
@@ -33,7 +38,9 @@ export function CallEval() {
       const recent = await fetchJSON<any[]>(url);
       console.debug("[CallEval] transcripts loaded", recent?.length || 0);
       if (!recent?.length) return null;
-      const ended = recent.find((s) => (s.status || "").toUpperCase() === "ENDED");
+      const ended = recent.find(
+        (s) => (s.status || "").toUpperCase() === "ENDED"
+      );
       const chosen = (ended?.id as string) || (recent[0].id as string);
       console.debug("[CallEval] chosen session", { chosen, ended: !!ended });
       return chosen;
@@ -45,7 +52,8 @@ export function CallEval() {
 
   const run = useCallback(async () => {
     console.debug("[CallEval] evaluate click");
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       const id = await pickLatestEnded();
       if (!id) throw new Error("No ended session available to evaluate");
@@ -56,7 +64,10 @@ export function CallEval() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ sessionId: id }),
       });
-      console.debug("[CallEval] eval ok", { id, keys: Object.keys(data || {}) });
+      console.debug("[CallEval] eval ok", {
+        id,
+        keys: Object.keys(data || {}),
+      });
       setLastSessionId(id);
       setResult(data);
     } catch (e: any) {
@@ -69,30 +80,49 @@ export function CallEval() {
   }, [pickLatestEnded]);
 
   return (
-    <div className="rounded-lg border p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium">Post‑call Evaluation</h3>
-        <button
-          className="text-xs border px-3 py-2 rounded disabled:opacity-50"
-          onClick={run}
-          disabled={disabled}
-        >
-          {busy ? "Evaluating…" : "Evaluate Latest Ended Session"}
-        </button>
-      </div>
-      {lastSessionId ? (
-        <div className="text-xs text-muted-foreground mb-2">session_id: {lastSessionId}</div>
-      ) : null}
-      {error ? (
-        <div className="text-xs text-red-600 mb-2">{error}</div>
-      ) : null}
-      {result ? (
-        <pre className="text-xs bg-muted/30 p-3 rounded overflow-auto max-h-80">
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      ) : (
-        <div className="text-xs text-muted-foreground">No evaluation yet.</div>
+    <div className='space-y-6'>
+      <Card className='p-6'>
+        <div className='flex items-center justify-between mb-4'>
+          <h3 className='text-lg font-semibold'>Call Evaluation</h3>
+          <Button
+            onClick={run}
+            disabled={disabled}
+            className='flex items-center gap-2'
+          >
+            {busy ? (
+              <>
+                <Loader2 className='h-4 w-4 animate-spin' />
+                Evaluating…
+              </>
+            ) : (
+              "Evaluate Latest Session"
+            )}
+          </Button>
+        </div>
+
+        {error && (
+          <div className='flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md mb-4'>
+            <AlertCircle className='h-4 w-4 text-red-500' />
+            <span className='text-red-700 text-sm'>{error}</span>
+          </div>
+        )}
+
+        {!result && !error && !busy && (
+          <div className='text-center py-8 text-muted-foreground'>
+            <div className='text-sm'>
+              Click "Evaluate Latest Session" to analyze your most recent ended
+              call.
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {result && (
+        <EvaluationDisplay
+          evaluation={result}
+          sessionId={lastSessionId || undefined}
+        />
       )}
     </div>
   );
-} 
+}
