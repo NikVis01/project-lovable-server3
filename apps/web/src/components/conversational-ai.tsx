@@ -332,13 +332,15 @@ export function ConversationalAI() {
           </div>
 
           {/* Configuration Form */}
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='space-y-2'>
-              <Label htmlFor='agentSelect'>Agent *</Label>
+          <div className='flex justify-center'>
+            <div className='space-y-2 w-full max-w-md'>
+              <Label htmlFor='agentSelect' className='text-center block'>
+                Agent *
+              </Label>
               <div className='flex gap-2'>
                 <select
                   id='agentSelect'
-                  className='w-full p-2 border rounded-md'
+                  className='w-full p-3 border rounded-md text-center'
                   value={agentId}
                   onChange={(e) => setAgentId(e.target.value)}
                   disabled={isConnected || loadingAgents}
@@ -355,16 +357,18 @@ export function ConversationalAI() {
                 </select>
               </div>
               {agentsError && (
-                <p className='text-xs text-red-600'>{agentsError}</p>
+                <p className='text-xs text-red-600 text-center'>
+                  {agentsError}
+                </p>
               )}
             </div>
-
-            {/* User ID removed; using hard-coded default until auth is implemented */}
-
-            {/* Connection type removed; WebRTC enforced */}
-
-            {/* Volume slider removed; audio is always 100% unless muted */}
           </div>
+
+          {/* User ID removed; using hard-coded default until auth is implemented */}
+
+          {/* Connection type removed; WebRTC enforced */}
+
+          {/* Volume slider removed; audio is always 100% unless muted */}
 
           {/* Control Buttons */}
           <div className='flex justify-center gap-4'>

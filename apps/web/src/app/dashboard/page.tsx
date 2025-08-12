@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function Dashboard() {
   const { data: session, isPending } = authClient.useSession();
@@ -39,24 +40,30 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
-                    <h3 className='font-semibold mb-2'>Start Pre-Call</h3>
-                    <p className='text-sm text-muted-foreground'>
-                      Configure AI and prepare for your call
-                    </p>
-                  </div>
-                  <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
-                    <h3 className='font-semibold mb-2'>Live Recording</h3>
-                    <p className='text-sm text-muted-foreground'>
-                      Start a new recording session
-                    </p>
-                  </div>
-                  <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
-                    <h3 className='font-semibold mb-2'>View History</h3>
-                    <p className='text-sm text-muted-foreground'>
-                      Review past sessions and progress
-                    </p>
-                  </div>
+                  <Link href='/dashboard/pre-call'>
+                    <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
+                      <h3 className='font-semibold mb-2'>Start Pre-Call</h3>
+                      <p className='text-sm text-muted-foreground'>
+                        Configure AI and prepare for your call
+                      </p>
+                    </div>
+                  </Link>
+                  <Link href='/dashboard/current-call'>
+                    <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
+                      <h3 className='font-semibold mb-2'>Live Recording</h3>
+                      <p className='text-sm text-muted-foreground'>
+                        Start a new recording session
+                      </p>
+                    </div>
+                  </Link>
+                  <Link href='/dashboard/post-call'>
+                    <div className='p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors'>
+                      <h3 className='font-semibold mb-2'>View History</h3>
+                      <p className='text-sm text-muted-foreground'>
+                        Review past sessions and progress
+                      </p>
+                    </div>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
