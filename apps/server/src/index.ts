@@ -126,6 +126,7 @@ type GroupEntry = {
   canonicalSocketId: string; // DB row is keyed by this socketId
   sockets: Set<string>;
   timer?: NodeJS.Timeout;
+  isAnalyzing?: boolean;
 };
 const clientGroups = new Map<string, GroupEntry>();
 const socketToGroupKey = new Map<string, string>();
@@ -144,6 +145,12 @@ io.on("connection", (socket) => {
     if (entry.timer) clearInterval(entry.timer);
     const t = setInterval(async () => {
       try {
+        const current = clientGroups.get(groupKey);
+        if (!current) return;
+        if (current.isAnalyzing) return;
+        current.isAnalyzing = true;
+        clientGroups.set(groupKey, current);
+
         const baseUrl =
           process.env.NODE_ENV === "production"
             ? `https://${
@@ -156,7 +163,15 @@ io.on("connection", (socket) => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ sessionId }),
         }).catch(() => {});
-      } catch {}
+      } catch {
+        // no-op
+      } finally {
+        const current = clientGroups.get(groupKey);
+        if (current) {
+          current.isAnalyzing = false;
+          clientGroups.set(groupKey, current);
+        }
+      }
     }, 15_000);
     entry.timer = t;
     clientGroups.set(groupKey, entry);
