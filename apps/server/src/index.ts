@@ -52,7 +52,7 @@ app.use(
 );
 // TODO: add a health check endpoint for the server
 
-app.all("/api/auth/*splat", toNodeHandler(auth));
+app.all("/api/auth{/*path}", toNodeHandler(auth));
 
 app.use(express.json());
 
