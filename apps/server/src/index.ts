@@ -50,6 +50,7 @@ app.use(
     optionsSuccessStatus: 204,
   })
 );
+// TODO: add a health check endpoint for the server
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
