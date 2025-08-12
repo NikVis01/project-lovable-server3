@@ -30,66 +30,6 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Today's Calls
-                  </CardTitle>
-                  <Phone className='h-4 w-4 text-muted-foreground' />
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>0</div>
-                  <p className='text-xs text-muted-foreground'>
-                    No calls scheduled
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    This Week
-                  </CardTitle>
-                  <Calendar className='h-4 w-4 text-muted-foreground' />
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>0</div>
-                  <p className='text-xs text-muted-foreground'>
-                    Calls completed
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Average Score
-                  </CardTitle>
-                  <BarChart className='h-4 w-4 text-muted-foreground' />
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>--</div>
-                  <p className='text-xs text-muted-foreground'>
-                    No data available
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    Total Sessions
-                  </CardTitle>
-                  <History className='h-4 w-4 text-muted-foreground' />
-                </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>0</div>
-                  <p className='text-xs text-muted-foreground'>All time</p>
-                </CardContent>
-              </Card>
-            </div>
-
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
