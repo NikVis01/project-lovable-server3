@@ -28,25 +28,6 @@ interface ConversationMessage {
   isFinal?: boolean;
 }
 
-const predefinedAgents = [
-  {
-    id: "1",
-    name: "Eagle",
-  },
-  {
-    id: "2",
-    name: "Owl",
-  },
-  {
-    id: "3",
-    name: "Peacock",
-  },
-  {
-    id: "4",
-    name: "Dove",
-  },
-];
-
 export function ConversationalAI() {
   // Configuration state
   const [agentId, setAgentId] = useState(
@@ -58,7 +39,7 @@ export function ConversationalAI() {
 
   // Agents list
   type ListedAgent = { id: string; name?: string };
-  const [agents, setAgents] = useState<ListedAgent[]>(predefinedAgents);
+  const [agents, setAgents] = useState<ListedAgent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentsError, setAgentsError] = useState<string | null>(null);
 
@@ -222,48 +203,22 @@ export function ConversationalAI() {
             }))
             .filter((a: ListedAgent) => !!a.id);
         } else {
-          console.warn(
-            "Failed to fetch backend agents, using only predefined agents"
-          );
+          console.warn("Failed to fetch backend agents");
         }
       } catch (e) {
-        console.warn(
-          "Backend agents unavailable, using only predefined agents:",
-          e
-        );
+        console.warn("Backend agents unavailable:", e);
       }
 
-      // Combine predefined agents with backend agents
-      // Remove duplicates by ID, preferring backend agents over predefined ones
-      const combinedAgents: ListedAgent[] = [...predefinedAgents];
-
-      backendAgents.forEach((backendAgent) => {
-        const existingIndex = combinedAgents.findIndex(
-          (agent) => agent.id === backendAgent.id
-        );
-        if (existingIndex >= 0) {
-          // Replace predefined agent with backend agent (backend has priority)
-          combinedAgents[existingIndex] = backendAgent;
-        } else {
-          // Add new backend agent
-          combinedAgents.push(backendAgent);
-        }
-      });
-
-      setAgents(combinedAgents);
+      setAgents(backendAgents);
 
       // If no agent selected yet, preselect the first
-      if (!agentId && combinedAgents.length > 0) {
-        setAgentId(combinedAgents[0].id);
+      if (!agentId && backendAgents.length > 0) {
+        setAgentId(backendAgents[0].id);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load agents";
       setAgentsError(msg);
-      // Fallback to predefined agents only
-      setAgents(predefinedAgents);
-      if (!agentId && predefinedAgents.length > 0) {
-        setAgentId(predefinedAgents[0].id);
-      }
+      setAgents([]);
       toast.error(msg);
     } finally {
       setLoadingAgents(false);

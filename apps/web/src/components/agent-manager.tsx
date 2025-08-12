@@ -398,7 +398,7 @@ export function AgentManager() {
                   <Label htmlFor='agent-name'>Agent Name *</Label>
                   <Input
                     id='agent-name'
-                    placeholder='e.g., Customer Support Bot'
+                    placeholder='e.g., Gym Owner Client (for sales practice)'
                     value={newAgent.name}
                     onChange={(e) =>
                       setNewAgent((prev) => ({ ...prev, name: e.target.value }))
@@ -506,7 +506,7 @@ export function AgentManager() {
                 <textarea
                   id='system-prompt'
                   className='w-full p-3 border rounded-md min-h-[120px]'
-                  placeholder="Define the agent's personality, role, and behavior. For example: 'You are a helpful customer support agent for an e-commerce company. You should be friendly, professional, and always try to resolve customer issues efficiently.'"
+                  placeholder="Define the agent as a SALES CLIENT for practice. Example: 'You are a gym owner who runs a busy fitness center with 500+ members. You're interested in adding ice baths to improve member recovery and attract new clients. You have a budget of $15-25k and need to see clear ROI. Ask detailed questions about installation, maintenance costs, member usage data, and how it will help with member retention. Be realistic about gym owner concerns like space, liability, and ongoing costs.'"
                   value={newAgent.system_prompt}
                   onChange={(e) =>
                     setNewAgent((prev) => ({
@@ -525,7 +525,7 @@ export function AgentManager() {
                 <textarea
                   id='agent-prompt'
                   className='w-full p-3 border rounded-md min-h-[80px]'
-                  placeholder='Additional conversation-specific instructions...'
+                  placeholder='Additional sales client behaviors: "Show skepticism about price at first, ask for references from similar gyms, inquire about trial periods or financing options, express concerns about member adoption rates..."'
                   value={newAgent.conversation_config.agent_prompt}
                   onChange={(e) =>
                     setNewAgent((prev) => ({
@@ -544,7 +544,7 @@ export function AgentManager() {
                 <Label htmlFor='first-message'>First Message</Label>
                 <Input
                   id='first-message'
-                  placeholder='How the agent will greet users'
+                  placeholder='e.g., "Hi there! I heard you have ice bath solutions for gyms. I run FitLife Gym and I&apos;m exploring recovery options for my members. Can you tell me more about your products?"'
                   value={newAgent.conversation_config.first_message}
                   onChange={(e) =>
                     setNewAgent((prev) => ({
@@ -834,39 +834,6 @@ export function AgentManager() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Instructions */}
-      <Card className='p-4 bg-blue-50 border-blue-200'>
-        <h4 className='font-medium mb-2 text-blue-800'>
-          🤖 How to Use Agent Manager:
-        </h4>
-        <ul className='text-sm text-blue-700 space-y-1'>
-          <li>
-            • <strong>Create Agent:</strong> Define your agent's personality
-            with a system prompt and choose a voice
-          </li>
-          <li>
-            • <strong>System Prompt:</strong> This sets the agent's behavior,
-            personality, and role
-          </li>
-          <li>
-            • <strong>Voice Selection:</strong> Click on any voice to select it,
-            use the mic button to preview
-          </li>
-          <li>
-            • <strong>First Message:</strong> What the agent says when starting
-            a conversation
-          </li>
-          <li>
-            • <strong>Agent ID:</strong> Copy the Agent ID to use with the
-            conversational AI component
-          </li>
-          <li>
-            • <strong>Languages:</strong> Agents can be configured for different
-            languages
-          </li>
-        </ul>
-      </Card>
     </div>
   );
 }
