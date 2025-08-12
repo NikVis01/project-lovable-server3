@@ -19,7 +19,7 @@ export const auth = betterAuth({
 
   baseURL:
     process.env.NODE_ENV === "production"
-      ? "https://smart-notes-server-maurn.ondigitalocean.app"
+      ? "https://lovable-server-3g7jz.ondigitalocean.app"
       : "http://localhost:3000",
   advanced: {
     crossSubDomainCookies: {
