@@ -6,7 +6,6 @@ import { Server } from "socket.io";
 import { SpeechService } from "./services/speech.service.js";
 import { transcriptService } from "./services/transcript.service.js";
 import { appRouter } from "./routers/index.js";
-import { agentRouter } from "./routers/agent.router.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import { evalRouter } from "./routers/eval.router.js";
@@ -20,8 +19,6 @@ const io = new Server(server, {
     origin:
       process.env.CORS_ORIGIN || "http://localhost:3001, http://localhost:8080",
     methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
-    origin: process.env.CORS_ORIGIN || "http://localhost:3001",
-    methods: ["GET", "POST"],
     credentials: true,
   },
 });
@@ -33,8 +30,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
     optionsSuccessStatus: 204,
-    origin: process.env.CORS_ORIGIN || "",
-    methods: ["GET", "POST", "OPTIONS"],
   })
 );
 
