@@ -13,19 +13,37 @@ import { evalRouter } from "./routers/eval.router.js";
 const app = express();
 const server = createServer(app);
 
+// Parse CORS origins from environment or use defaults
+const getCorsOrigins = () => {
+  if (process.env.CORS_ORIGIN) {
+    return process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
+  }
+  return [
+    "http://localhost:3001",
+    "http://localhost:8080",
+    "https://project-lovable-server3.onrender.com",
+  ];
+};
+
+const corsOrigins = getCorsOrigins();
+
 // Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin:
-      process.env.CORS_ORIGIN || "http://localhost:3001, http://localhost:8080",
+    origin: corsOrigins,
     methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
     credentials: true,
   },
+  // Allow both polling and websocket transports for better compatibility
+  transports: ["polling", "websocket"],
+  // Increase timeout for Render deployments
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
+
 app.use(
   cors({
-    origin:
-      process.env.CORS_ORIGIN || "http://localhost:3001, http://localhost:8080",
+    origin: corsOrigins,
     methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -46,6 +64,15 @@ app.use("/api", evalRouter);
 
 app.get("/", (_req, res) => {
   res.status(200).send("OK");
+});
+
+// Health check endpoint for Render
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    socketConnections: io.sockets.sockets.size,
+  });
 });
 
 // API endpoint to get recent transcript sessions
@@ -116,7 +143,14 @@ io.on("connection", (socket) => {
     if (entry.timer) clearInterval(entry.timer);
     const t = setInterval(async () => {
       try {
-        await fetch(`http://localhost:${port}/api/analyze/${sessionId}`, {
+        const baseUrl =
+          process.env.NODE_ENV === "production"
+            ? `https://${
+                process.env.RENDER_EXTERNAL_HOSTNAME ||
+                "project-lovable-server3.onrender.com"
+              }`
+            : `http://localhost:${port}`;
+        await fetch(`${baseUrl}/api/analyze/${sessionId}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ sessionId }),

@@ -147,16 +147,29 @@ export function UnifiedTranscriptionRecorder() {
   // Initialize socket connections
   useEffect(() => {
     const serverUrl =
-      process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_SERVER_URL ||
+      "https://project-lovable-server3.onrender.com";
 
-    // Initialize microphone socket
+    // Initialize microphone socket with better production settings
     micSocketRef.current = io(serverUrl, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"], // Allow fallback to polling
+      timeout: 20000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
-    // Initialize system audio socket
+    // Initialize system audio socket with better production settings
     systemSocketRef.current = io(serverUrl, {
-      transports: ["websocket"],
+      transports: ["polling", "websocket"], // Allow fallback to polling
+      timeout: 20000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     const micSocket = micSocketRef.current;
@@ -166,11 +179,34 @@ export function UnifiedTranscriptionRecorder() {
     micSocket.on("connect", () => {
       console.log("Connected to server for microphone");
       setIsConnected(true);
+      toast.success("Connected to transcription server");
     });
 
-    micSocket.on("disconnect", () => {
-      console.log("Disconnected from microphone server");
+    micSocket.on("disconnect", (reason) => {
+      console.log("Disconnected from microphone server:", reason);
       setIsConnected(false);
+      toast.error("Disconnected from server");
+    });
+
+    micSocket.on("connect_error", (error) => {
+      console.error("Microphone socket connection error:", error);
+      setIsConnected(false);
+      toast.error(`Connection failed: ${error.message}`);
+    });
+
+    micSocket.on("reconnect", (attemptNumber) => {
+      console.log(
+        "Reconnected to microphone server after",
+        attemptNumber,
+        "attempts"
+      );
+      setIsConnected(true);
+      toast.success("Reconnected to server");
+    });
+
+    micSocket.on("reconnect_error", (error) => {
+      console.error("Reconnection failed:", error);
+      toast.error("Reconnection failed");
     });
 
     micSocket.on("transcription-started", (data: { sessionId: string }) => {
@@ -208,6 +244,14 @@ export function UnifiedTranscriptionRecorder() {
     // System audio socket events
     systemSocket.on("connect", () => {
       console.log("Connected to server for system audio");
+    });
+
+    systemSocket.on("connect_error", (error) => {
+      console.error("System audio socket connection error:", error);
+    });
+
+    systemSocket.on("disconnect", (reason) => {
+      console.log("System audio socket disconnected:", reason);
     });
 
     systemSocket.on("transcription-result", (data: TranscriptionResult) => {
