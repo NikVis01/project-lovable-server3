@@ -35,7 +35,7 @@ export function SystemAudioRecorder() {
     const checkBrowserSupport = () => {
       const isSupported =
         navigator.mediaDevices &&
-        navigator.mediaDevices.getDisplayMedia &&
+        typeof navigator.mediaDevices.getDisplayMedia === "function" &&
         window.isSecureContext;
 
       setBrowserSupported(isSupported);
@@ -161,7 +161,6 @@ export function SystemAudioRecorder() {
       // Note: We need to request video as well in many browsers, then ignore it
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          mediaSource: "screen",
           width: { ideal: 1 },
           height: { ideal: 1 },
         },
@@ -485,7 +484,9 @@ export function SystemAudioRecorder() {
               <li>• Media Devices: {navigator.mediaDevices ? "✅" : "❌"}</li>
               <li>
                 • getDisplayMedia:{" "}
-                {navigator.mediaDevices?.getDisplayMedia ? "✅" : "❌"}
+                {typeof navigator.mediaDevices?.getDisplayMedia === "function"
+                  ? "✅"
+                  : "❌"}
               </li>
               <li>• Secure Context: {window.isSecureContext ? "✅" : "❌"}</li>
             </ul>
