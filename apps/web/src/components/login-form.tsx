@@ -70,7 +70,7 @@ export function LoginForm({
                   variant='outline'
                   className='w-full'
                   onClick={handleGoogleLogin}
-                  disabled={isLoading}
+                  disabled
                 >
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
