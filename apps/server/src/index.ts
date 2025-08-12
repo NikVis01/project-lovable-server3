@@ -7,6 +7,8 @@ import { SpeechService } from "./services/speech.service.js";
 import { transcriptService } from "./services/transcript.service.js";
 import { appRouter } from "./routers/index.js";
 import { agentRouter } from "./routers/agent.router.js";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./lib/auth";
 
 const app = express();
 const server = createServer(app);
@@ -14,20 +16,24 @@ const server = createServer(app);
 // Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:3001",
+    origin:
+      process.env.CORS_ORIGIN || "http://localhost:3001, http://localhost:8080",
     methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
     credentials: true,
   },
 });
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3001",
+    origin:
+      process.env.CORS_ORIGIN || "http://localhost:3001, http://localhost:8080",
     methods: ["GET", "POST", "OPTIONS", "DELETE", "PUT", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
     optionsSuccessStatus: 204,
   })
 );
+
+app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use(express.json());
 
