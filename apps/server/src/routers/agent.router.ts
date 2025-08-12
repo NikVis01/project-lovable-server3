@@ -14,8 +14,8 @@ agentRouter.post("/analyze/:sessionId", async (req, res) => {
       return res.status(404).json({ error: "Session not found" });
     }
 
-    const client = (session.transcriptInput || "").trim();
-    const salesman = (session.transcriptOutput || "").trim();
+    const salesman = (session.transcriptInput || "").trim();
+    const client = (session.transcriptOutput || "").trim();
 
     // If nothing to analyze, return thin payload (UI will show no-op)
     if (!client && !salesman) {
