@@ -28,6 +28,25 @@ interface ConversationMessage {
   isFinal?: boolean;
 }
 
+const predefinedAgents = [
+  {
+    id: "1",
+    name: "Eagle",
+  },
+  {
+    id: "2",
+    name: "Owl",
+  },
+  {
+    id: "3",
+    name: "Peacock",
+  },
+  {
+    id: "4",
+    name: "Dove",
+  },
+];
+
 export function ConversationalAI() {
   // Configuration state
   const [agentId, setAgentId] = useState(
@@ -39,7 +58,7 @@ export function ConversationalAI() {
 
   // Agents list
   type ListedAgent = { id: string; name?: string };
-  const [agents, setAgents] = useState<ListedAgent[]>([]);
+  const [agents, setAgents] = useState<ListedAgent[]>(predefinedAgents);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [agentsError, setAgentsError] = useState<string | null>(null);
 
@@ -187,28 +206,64 @@ export function ConversationalAI() {
     try {
       setLoadingAgents(true);
       setAgentsError(null);
-      const serverUrl =
-        process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
-      const resp = await fetch(`${serverUrl}/api/elevenlabs/agents`);
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to load agents");
+
+      let backendAgents: ListedAgent[] = [];
+
+      try {
+        const serverUrl =
+          process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3000";
+        const resp = await fetch(`${serverUrl}/api/elevenlabs/agents`);
+        if (resp.ok) {
+          const data = await resp.json();
+          backendAgents = (data.agents || [])
+            .map((a: any) => ({
+              id: a.agent_id || a.agentId || a.id,
+              name: a.name || a.agent_name || undefined,
+            }))
+            .filter((a: ListedAgent) => !!a.id);
+        } else {
+          console.warn(
+            "Failed to fetch backend agents, using only predefined agents"
+          );
+        }
+      } catch (e) {
+        console.warn(
+          "Backend agents unavailable, using only predefined agents:",
+          e
+        );
       }
-      const data = await resp.json();
-      const list: ListedAgent[] = (data.agents || [])
-        .map((a: any) => ({
-          id: a.agent_id || a.agentId || a.id,
-          name: a.name || a.agent_name || undefined,
-        }))
-        .filter((a: ListedAgent) => !!a.id);
-      setAgents(list);
+
+      // Combine predefined agents with backend agents
+      // Remove duplicates by ID, preferring backend agents over predefined ones
+      const combinedAgents: ListedAgent[] = [...predefinedAgents];
+
+      backendAgents.forEach((backendAgent) => {
+        const existingIndex = combinedAgents.findIndex(
+          (agent) => agent.id === backendAgent.id
+        );
+        if (existingIndex >= 0) {
+          // Replace predefined agent with backend agent (backend has priority)
+          combinedAgents[existingIndex] = backendAgent;
+        } else {
+          // Add new backend agent
+          combinedAgents.push(backendAgent);
+        }
+      });
+
+      setAgents(combinedAgents);
+
       // If no agent selected yet, preselect the first
-      if (!agentId && list.length > 0) {
-        setAgentId(list[0].id);
+      if (!agentId && combinedAgents.length > 0) {
+        setAgentId(combinedAgents[0].id);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to load agents";
       setAgentsError(msg);
+      // Fallback to predefined agents only
+      setAgents(predefinedAgents);
+      if (!agentId && predefinedAgents.length > 0) {
+        setAgentId(predefinedAgents[0].id);
+      }
       toast.error(msg);
     } finally {
       setLoadingAgents(false);
@@ -318,12 +373,7 @@ export function ConversationalAI() {
       <Card className='p-6'>
         <div className='space-y-4'>
           <div className='text-center'>
-            <h2 className='text-2xl font-bold mb-2'>
-              ElevenLabs Conversational AI
-            </h2>
-            <p className='text-muted-foreground'>
-              Interactive voice conversations with AI agents
-            </p>
+            <h2 className='text-2xl font-bold mb-2'>Practice sales sparring</h2>
           </div>
 
           {/* Configuration Form */}
@@ -459,103 +509,6 @@ export function ConversationalAI() {
             </div>
           )}
         </div>
-      </Card>
-
-      {/* Conversation Display */}
-      <Card className='p-6 min-h-[400px]'>
-        <div className='space-y-4'>
-          <div className='flex items-center justify-between'>
-            <h3 className='text-lg font-semibold flex items-center gap-2'>
-              <MessageSquare className='h-5 w-5' />
-              Conversation
-            </h3>
-            <div className='flex items-center gap-2'>
-              {messages.length > 0 && (
-                <Button onClick={clearMessages} variant='outline' size='sm'>
-                  Clear Messages
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Messages Display */}
-          <div className='space-y-3 max-h-[400px] overflow-y-auto'>
-            {messages.length === 0 ? (
-              <div className='text-center py-12 text-gray-500'>
-                {isConnected
-                  ? "Start speaking to begin the conversation..."
-                  : "Connect to start a conversation with the AI agent"}
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.sender === "user"
-                        ? "bg-blue-500 text-white"
-                        : message.sender === "agent"
-                        ? "bg-gray-100 text-gray-900"
-                        : "bg-yellow-50 text-yellow-800 text-sm"
-                    } ${!message.isFinal ? "opacity-70 italic" : ""}`}
-                  >
-                    <div className='flex items-center gap-2 mb-1'>
-                      {message.sender === "user" && <Mic className='h-4 w-4' />}
-                      {message.sender === "agent" && (
-                        <Phone className='h-4 w-4' />
-                      )}
-                      {message.sender === "system" && (
-                        <Settings className='h-4 w-4' />
-                      )}
-                      <span className='text-xs opacity-75'>
-                        {message.sender === "user"
-                          ? "You"
-                          : message.sender === "agent"
-                          ? "AI Agent"
-                          : "System"}
-                        {!message.isFinal && " (speaking...)"}
-                      </span>
-                    </div>
-                    <p className='whitespace-pre-wrap'>{message.text}</p>
-                    <div className='text-xs opacity-50 mt-1'>
-                      {message.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-      </Card>
-
-      {/* Instructions */}
-      <Card className='p-4 bg-blue-50 border-blue-200'>
-        <h4 className='font-medium mb-2 text-blue-800'>💬 How to Use:</h4>
-        <ul className='text-sm text-blue-700 space-y-1'>
-          <li>
-            • Enter your ElevenLabs Agent ID (get it from the ElevenLabs
-            dashboard)
-          </li>
-          <li>• Optionally provide a User ID to track conversations</li>
-          <li>
-            • Choose WebRTC for better audio quality or WebSocket for
-            compatibility
-          </li>
-          <li>
-            • Click "Start Conversation" and allow microphone access when
-            prompted
-          </li>
-          <li>• Speak naturally - the AI will respond with voice and text</li>
-          <li>
-            • Use the volume slider and mute button to control audio output
-          </li>
-          <li>• Click "End Conversation" when you're done</li>
-        </ul>
       </Card>
     </div>
   );
