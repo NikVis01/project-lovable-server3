@@ -33,7 +33,7 @@ export default function Home() {
         <TabsList className='grid w-full grid-cols-4'>
           <TabsTrigger value='recorder' className='flex items-center gap-2'>
             <Mic className='h-4 w-4' />
-            Live Recording
+            Live Recordings
           </TabsTrigger>
           <TabsTrigger
             value='conversational-ai'
