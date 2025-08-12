@@ -926,67 +926,6 @@ export function UnifiedTranscriptionRecorder() {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Instructions */}
-      <Card className='p-4 bg-blue-50 border-blue-200'>
-        <h4 className='font-medium mb-2 text-blue-800'>📝 How to Use:</h4>
-        <ul className='text-sm text-blue-700 space-y-1'>
-          <li>
-            • Click "Start Recording" to begin simultaneous sales representative
-            and client audio capture
-          </li>
-          <li>
-            • You'll first be prompted to select a browser tab for client audio
-            capture
-          </li>
-          <li>
-            • Make sure to enable "Share tab audio" or "Share system audio" in
-            the dialog
-          </li>
-          <li>
-            • Both sales representative and client audio will be transcribed in
-            real-time
-          </li>
-          <li>
-            • Use the tabs above to switch between viewing Sales and Client
-            transcriptions
-          </li>
-          <li>• Both transcriptions are automatically saved to the database</li>
-          <li>
-            • Click "Stop Recording" to end both recordings simultaneously
-          </li>
-        </ul>
-      </Card>
-
-      {/* Browser Compatibility Warning */}
-      {(!microphoneSupported || !systemAudioSupported) && (
-        <Card className='p-4 bg-yellow-50 border-yellow-200'>
-          <h4 className='font-medium mb-2 text-yellow-800'>
-            ⚠️ Compatibility Issues
-          </h4>
-          <div className='text-sm text-yellow-700 space-y-2'>
-            {!microphoneSupported && (
-              <p>
-                • Microphone access is not supported in your current browser
-              </p>
-            )}
-            {!systemAudioSupported && (
-              <p>
-                • System audio capture is not supported in your current
-                environment
-              </p>
-            )}
-            <p>
-              <strong>Requirements:</strong>
-            </p>
-            <ul className='ml-4 space-y-1'>
-              <li>• Modern browser (Chrome 70+, Edge 79+, or Firefox 92+)</li>
-              <li>• HTTPS connection (or localhost for development)</li>
-              <li>• Microphone and system audio permissions</li>
-            </ul>
-          </div>
-        </Card>
-      )}
     </div>
   );
 }
