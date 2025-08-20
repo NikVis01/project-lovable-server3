@@ -127,6 +127,8 @@ type GroupEntry = {
   sockets: Set<string>;
   timer?: NodeJS.Timeout;
   isAnalyzing?: boolean;
+  lastProcessedContent?: string; // Track last content hash to avoid duplicate processing
+  lastContentLength?: number;   // Track content length for quick checks
 };
 const clientGroups = new Map<string, GroupEntry>();
 const socketToGroupKey = new Map<string, string>();
@@ -155,12 +157,11 @@ io.on("connection", (socket) => {
           console.log(`[Agent] No active sockets in group ${groupKey}, stopping agent`);
           return;
         }
-        
+
         current.isAnalyzing = true;
         clientGroups.set(groupKey, current);
-        console.log(`[Agent] Starting analysis for session ${sessionId}`);
 
-        const startTime = Date.now();
+        // Define base URL for API calls
         const baseUrl =
           process.env.NODE_ENV === "production"
             ? `https://${
@@ -168,6 +169,60 @@ io.on("connection", (socket) => {
                 "project-lovable-server3.onrender.com"
               }`
             : `http://localhost:${port}`;
+
+        // Check if the session is still active in the database
+        try {
+          const sessionStatus = await fetch(`${baseUrl}/api/analyze/${sessionId}/check-content`).then(r => r.json());
+          if (!sessionStatus.hasContent && !sessionStatus.contentLength) {
+            console.log(`[Agent] Session ${sessionId} has no content, will check again shortly`);
+            // Schedule a shorter check since there's no content yet
+            const current3 = clientGroups.get(groupKey);
+            if (current3 && current3.timer && current3.sockets.size > 0) {
+              current3.timer = setTimeout(() => runAgentAnalysis(), 5_000); // Check again in 5s
+              clientGroups.set(groupKey, current3);
+            }
+            return;
+          }
+        } catch (error) {
+          console.log(`[Agent] Could not check session status, continuing with analysis`);
+        }
+        
+        // First, check current content to see if it has changed
+        const contentCheckResponse = await fetch(`${baseUrl}/api/analyze/${sessionId}/check-content`, {
+          method: "GET",
+          headers: { "content-type": "application/json" },
+        }).catch(() => null);
+        
+        let hasNewContent = true;
+        if (contentCheckResponse && contentCheckResponse.ok) {
+          const contentInfo = await contentCheckResponse.json();
+          const currentContentHash = contentInfo.contentHash;
+          const currentLength = contentInfo.contentLength;
+          
+          // Check if content has actually changed
+          if (current.lastProcessedContent === currentContentHash && 
+              current.lastContentLength === currentLength) {
+            console.log(`[Agent] No new content for session ${sessionId}, skipping analysis`);
+            hasNewContent = false;
+          } else {
+            current.lastProcessedContent = currentContentHash;
+            current.lastContentLength = currentLength;
+            clientGroups.set(groupKey, current);
+          }
+        }
+
+        if (!hasNewContent) {
+          // Schedule next check sooner since no processing was done
+          const current2 = clientGroups.get(groupKey);
+          if (current2 && current2.timer && current2.sockets.size > 0) {
+            current2.timer = setTimeout(() => runAgentAnalysis(), 10_000); // Check again in 10s
+            clientGroups.set(groupKey, current2);
+          }
+          return;
+        }
+
+        console.log(`[Agent] Starting analysis for session ${sessionId} with new content`);
+        const startTime = Date.now();
         
         // Call Claude API and wait for response
         await fetch(`${baseUrl}/api/analyze/${sessionId}`, {
