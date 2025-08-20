@@ -139,18 +139,28 @@ io.on("connection", (socket) => {
   let speechStream: any = null;
   let accumulatedTranscript = ""; // Track full transcript for this session
 
-  const startAgentTimer = (groupKey: string, sessionId: string) => {
-    const entry = clientGroups.get(groupKey);
-    if (!entry) return;
-    if (entry.timer) clearInterval(entry.timer);
-    const t = setInterval(async () => {
+  const startAgentLoop = async (groupKey: string, sessionId: string) => {
+    const runAgentAnalysis = async () => {
       try {
         const current = clientGroups.get(groupKey);
-        if (!current) return;
+        // Exit if group was deleted (call ended) or already analyzing
+        if (!current) {
+          console.log(`[Agent] Group ${groupKey} no longer exists, stopping agent`);
+          return;
+        }
         if (current.isAnalyzing) return;
+        
+        // Additional safety: check if there are active sockets in the group
+        if (current.sockets.size === 0) {
+          console.log(`[Agent] No active sockets in group ${groupKey}, stopping agent`);
+          return;
+        }
+        
         current.isAnalyzing = true;
         clientGroups.set(groupKey, current);
+        console.log(`[Agent] Starting analysis for session ${sessionId}`);
 
+        const startTime = Date.now();
         const baseUrl =
           process.env.NODE_ENV === "production"
             ? `https://${
@@ -158,13 +168,36 @@ io.on("connection", (socket) => {
                 "project-lovable-server3.onrender.com"
               }`
             : `http://localhost:${port}`;
+        
+        // Call Claude API and wait for response
         await fetch(`${baseUrl}/api/analyze/${sessionId}`, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ sessionId }),
         }).catch(() => {});
-      } catch {
-        // no-op
+
+        const elapsedTime = Date.now() - startTime;
+        const minInterval = 20_000; // 20 seconds minimum
+        const nextCallDelay = Math.max(minInterval - elapsedTime, 0);
+        
+        console.log(`[Agent] Analysis completed in ${elapsedTime}ms, next call in ${nextCallDelay}ms`);
+        
+        // Schedule next analysis with minimum 20s interval - only if group still exists
+        const current2 = clientGroups.get(groupKey);
+        if (current2 && current2.timer && current2.sockets.size > 0) {
+          current2.timer = setTimeout(() => runAgentAnalysis(), nextCallDelay);
+          clientGroups.set(groupKey, current2);
+        } else {
+          console.log(`[Agent] Group ${groupKey} ended during analysis, stopping agent`);
+        }
+      } catch (error) {
+        console.error(`[Agent] Error in analysis:`, error);
+        // Schedule retry after minimum interval - only if group still exists
+        const current = clientGroups.get(groupKey);
+        if (current && current.timer && current.sockets.size > 0) {
+          current.timer = setTimeout(() => runAgentAnalysis(), 20_000);
+          clientGroups.set(groupKey, current);
+        }
       } finally {
         const current = clientGroups.get(groupKey);
         if (current) {
@@ -172,15 +205,23 @@ io.on("connection", (socket) => {
           clientGroups.set(groupKey, current);
         }
       }
-    }, 15_000);
-    entry.timer = t;
+    };
+
+    const entry = clientGroups.get(groupKey);
+    if (!entry) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    
+    console.log(`[Agent] Starting agent loop for session ${sessionId}, group ${groupKey}`);
+    // Start the loop with initial call
+    entry.timer = setTimeout(() => runAgentAnalysis(), 0);
     clientGroups.set(groupKey, entry);
   };
 
   const stopAgentTimer = (groupKey: string) => {
     const entry = clientGroups.get(groupKey);
     if (!entry?.timer) return;
-    clearInterval(entry.timer);
+    console.log(`[Agent] Stopping agent for group ${groupKey}`);
+    clearTimeout(entry.timer);
     entry.timer = undefined;
     clientGroups.set(groupKey, entry);
   };
@@ -240,8 +281,8 @@ io.on("connection", (socket) => {
         };
         clientGroups.set(groupKey, group);
         socketToGroupKey.set(socket.id, groupKey);
-        // Start 15s agent polling while call is active
-        startAgentTimer(groupKey, dbSession.id);
+        // Start dynamic agent polling while call is active
+        startAgentLoop(groupKey, dbSession.id);
       } else {
         // Reuse existing group session
         group.sockets.add(socket.id);
